@@ -55,12 +55,12 @@ export default function CardsPage() {
           <p className="text-muted-foreground mt-1">Gerencie os cartões usados pela empresa e pessoais.</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
+          <DialogTrigger render={
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               Novo Cartão
             </Button>
-          </DialogTrigger>
+          } />
           <DialogContent className="sm:max-w-[425px]">
             <form onSubmit={handleCreateCard}>
               <DialogHeader>

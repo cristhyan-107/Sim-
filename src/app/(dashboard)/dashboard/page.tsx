@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { MOCK_SUMMARY, MOCK_TRANSACTIONS, MOCK_ALERTS } from "@/data/mock-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { ArrowDownIcon, ArrowUpIcon, AlertCircle, Building2, UserCircle2 } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, AlertCircle, Building2, UserCircle2, ArrowRightLeft } from "lucide-react";
 import {
   Bar,
   BarChart,

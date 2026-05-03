@@ -70,12 +70,12 @@ export default function AccountsPage() {
           <p className="text-muted-foreground mt-1">Gerencie suas contas de Pessoa Física e Jurídica.</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
+          <DialogTrigger render={
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Conta
             </Button>
-          </DialogTrigger>
+          } />
           <DialogContent className="sm:max-w-[425px]">
             <form onSubmit={handleCreateAccount}>
               <DialogHeader>
@@ -255,12 +255,12 @@ export default function AccountsPage() {
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <DropdownMenuTrigger render={
                             <Button variant="ghost" className="h-8 w-8 p-0">
                               <span className="sr-only">Abrir menu</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
-                          </DropdownMenuTrigger>
+                          } />
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => toast.info("Funcionalidade de edição em breve.")}>

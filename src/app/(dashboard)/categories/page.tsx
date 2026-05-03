@@ -96,12 +96,12 @@ export default function CategoriesPage() {
           <p className="text-muted-foreground mt-1">Classifique suas receitas e despesas.</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
+          <DialogTrigger render={
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Categoria
             </Button>
-          </DialogTrigger>
+          } />
           <DialogContent className="sm:max-w-[425px]">
             <form onSubmit={handleCreateCategory}>
               <DialogHeader>
@@ -171,7 +171,7 @@ export default function CategoriesPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={scopeFilter} onValueChange={setScopeFilter}>
+            <Select value={scopeFilter} onValueChange={(val) => setScopeFilter(val || "ALL")}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filtrar por Escopo" />
               </SelectTrigger>
@@ -227,12 +227,12 @@ export default function CategoriesPage() {
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <DropdownMenuTrigger render={
                             <Button variant="ghost" className="h-8 w-8 p-0">
                               <span className="sr-only">Abrir menu</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
-                          </DropdownMenuTrigger>
+                          } />
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => toast.info("Funcionalidade de edição em breve.")}>
