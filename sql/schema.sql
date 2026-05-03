@@ -1,9 +1,11 @@
--- Organiza MEI - Base Schema
+-- Organiza MEI - Base Schema Revisado
 
--- Enable UUID extension
+-- Habilitando extensão para UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- PROFILES
+-- ==========================================
+-- 1. PROFILES
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -13,7 +15,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ACCOUNTS
+-- ==========================================
+-- 2. ACCOUNTS
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.accounts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -28,7 +32,9 @@ CREATE TABLE IF NOT EXISTS public.accounts (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- CARDS
+-- ==========================================
+-- 3. CARDS (Sem dados sensíveis, apenas para controle)
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.cards (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -37,7 +43,7 @@ CREATE TABLE IF NOT EXISTS public.cards (
   bank TEXT NOT NULL,
   scope TEXT NOT NULL CHECK (scope IN ('PF', 'PJ')),
   credit_limit NUMERIC(15, 2),
-  last_four_digits TEXT,
+  last_four_digits TEXT, -- Apenas para identificar o cartão visualmente
   closing_day INTEGER NOT NULL CHECK (closing_day BETWEEN 1 AND 31),
   due_day INTEGER NOT NULL CHECK (due_day BETWEEN 1 AND 31),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
@@ -46,7 +52,9 @@ CREATE TABLE IF NOT EXISTS public.cards (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- CATEGORIES
+-- ==========================================
+-- 4. CATEGORIES
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.categories (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -58,7 +66,9 @@ CREATE TABLE IF NOT EXISTS public.categories (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TRANSACTIONS
+-- ==========================================
+-- 5. TRANSACTIONS
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -78,7 +88,9 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- INSTALLMENT PURCHASES
+-- ==========================================
+-- 6. INSTALLMENT PURCHASES
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.installment_purchases (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -90,19 +102,21 @@ CREATE TABLE IF NOT EXISTS public.installment_purchases (
   category_id UUID NOT NULL REFERENCES public.categories(id) ON DELETE RESTRICT,
   scope TEXT NOT NULL CHECK (scope IN ('PF', 'PJ')),
   purchase_date DATE NOT NULL,
-  first_invoice_month DATE NOT NULL, -- Stored as YYYY-MM-01
+  first_invoice_month DATE NOT NULL,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'finished')),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- INVOICES
+-- ==========================================
+-- 7. INVOICES
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.invoices (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   card_id UUID NOT NULL REFERENCES public.cards(id) ON DELETE RESTRICT,
-  invoice_month DATE NOT NULL, -- Stored as YYYY-MM-01
+  invoice_month DATE NOT NULL,
   due_date DATE NOT NULL,
   total_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed', 'paid')),
@@ -114,7 +128,9 @@ CREATE TABLE IF NOT EXISTS public.invoices (
   UNIQUE(card_id, invoice_month)
 );
 
--- INSTALLMENTS
+-- ==========================================
+-- 8. INSTALLMENTS
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.installments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -122,7 +138,7 @@ CREATE TABLE IF NOT EXISTS public.installments (
   card_id UUID NOT NULL REFERENCES public.cards(id) ON DELETE RESTRICT,
   installment_number INTEGER NOT NULL CHECK (installment_number > 0),
   total_installments INTEGER NOT NULL CHECK (total_installments > 0),
-  due_month DATE NOT NULL, -- Stored as YYYY-MM-01
+  due_month DATE NOT NULL,
   amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'cancelled')),
   invoice_id UUID REFERENCES public.invoices(id) ON DELETE SET NULL,
@@ -130,7 +146,9 @@ CREATE TABLE IF NOT EXISTS public.installments (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- RECURRENCES
+-- ==========================================
+-- 9. RECURRENCES
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.recurrences (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -150,13 +168,15 @@ CREATE TABLE IF NOT EXISTS public.recurrences (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- BUDGETS
+-- ==========================================
+-- 10. BUDGETS
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.budgets (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   category_id UUID NOT NULL REFERENCES public.categories(id) ON DELETE CASCADE,
   scope TEXT NOT NULL CHECK (scope IN ('PF', 'PJ')),
-  month DATE NOT NULL, -- Stored as YYYY-MM-01
+  month DATE NOT NULL,
   limit_amount NUMERIC(15, 2) NOT NULL CHECK (limit_amount >= 0),
   alert_percentage INTEGER DEFAULT 80 CHECK (alert_percentage BETWEEN 0 AND 100),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -164,11 +184,13 @@ CREATE TABLE IF NOT EXISTS public.budgets (
   UNIQUE(category_id, month)
 );
 
--- MONTHLY CLOSINGS
+-- ==========================================
+-- 11. MONTHLY CLOSINGS
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.monthly_closings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  month DATE NOT NULL, -- Stored as YYYY-MM-01
+  month DATE NOT NULL,
   pf_income NUMERIC(15, 2) DEFAULT 0,
   pf_expense NUMERIC(15, 2) DEFAULT 0,
   pf_result NUMERIC(15, 2) DEFAULT 0,
@@ -184,7 +206,9 @@ CREATE TABLE IF NOT EXISTS public.monthly_closings (
   UNIQUE(user_id, month)
 );
 
--- AUDIT LOGS
+-- ==========================================
+-- 12. AUDIT LOGS
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -192,31 +216,13 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   entity TEXT NOT NULL,
   entity_id UUID,
   metadata JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- INDEXES
-CREATE INDEX idx_profiles_user_id ON public.profiles(user_id);
-CREATE INDEX idx_accounts_user_id ON public.accounts(user_id);
-CREATE INDEX idx_cards_user_id ON public.cards(user_id);
-CREATE INDEX idx_categories_user_id ON public.categories(user_id);
-
-CREATE INDEX idx_transactions_user_id_date ON public.transactions(user_id, date);
-CREATE INDEX idx_transactions_account_id ON public.transactions(account_id);
-CREATE INDEX idx_transactions_card_id ON public.transactions(card_id);
-CREATE INDEX idx_transactions_scope ON public.transactions(scope);
-CREATE INDEX idx_transactions_category_id ON public.transactions(category_id);
-
-CREATE INDEX idx_installments_card_id ON public.installments(card_id);
-CREATE INDEX idx_installments_due_month ON public.installments(due_month);
-
-CREATE INDEX idx_invoices_card_id ON public.invoices(card_id);
-CREATE INDEX idx_invoices_month ON public.invoices(invoice_month);
-
-CREATE INDEX idx_budgets_user_id_month ON public.budgets(user_id, month);
-CREATE INDEX idx_monthly_closings_month ON public.monthly_closings(user_id, month);
-
+-- ==========================================
 -- TRIGGERS FOR UPDATED_AT
+-- ==========================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -236,3 +242,23 @@ CREATE TRIGGER update_invoices_modtime BEFORE UPDATE ON invoices FOR EACH ROW EX
 CREATE TRIGGER update_recurrences_modtime BEFORE UPDATE ON recurrences FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_budgets_modtime BEFORE UPDATE ON budgets FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_monthly_closings_modtime BEFORE UPDATE ON monthly_closings FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_audit_logs_modtime BEFORE UPDATE ON audit_logs FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+-- ==========================================
+-- INDEXES
+-- ==========================================
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON public.profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON public.accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_cards_user_id ON public.cards(user_id);
+CREATE INDEX IF NOT EXISTS idx_categories_user_id ON public.categories(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_user_id_date ON public.transactions(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON public.transactions(account_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_card_id ON public.transactions(card_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_scope ON public.transactions(scope);
+CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON public.transactions(category_id);
+CREATE INDEX IF NOT EXISTS idx_installments_card_id ON public.installments(card_id);
+CREATE INDEX IF NOT EXISTS idx_installments_due_month ON public.installments(due_month);
+CREATE INDEX IF NOT EXISTS idx_invoices_card_id ON public.invoices(card_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_month ON public.invoices(invoice_month);
+CREATE INDEX IF NOT EXISTS idx_budgets_user_id_month ON public.budgets(user_id, month);
+CREATE INDEX IF NOT EXISTS idx_monthly_closings_month ON public.monthly_closings(user_id, month);

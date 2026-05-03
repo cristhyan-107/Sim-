@@ -1,29 +1,35 @@
--- Default Categories Seed
--- IMPORTANT: Replace 'YOUR-USER-ID-UUID' with the actual user UUID before running, or adapt for application level insertion.
+-- ==========================================
+-- SEED DE CATEGORIAS PADRÃO (Organiza MEI)
+-- ==========================================
+-- IMPORTANTE: Substitua 'COLOQUE-SEU-USER-ID-AQUI' pelo seu UUID real 
+-- gerado na aba "Authentication" do Supabase.
 
--- PF Categories
+-- CATEGORIAS PESSOA FÍSICA (PF)
 INSERT INTO public.categories (user_id, name, scope, type) VALUES
-('YOUR-USER-ID-UUID', 'Alimentação', 'PF', 'expense'),
-('YOUR-USER-ID-UUID', 'Transporte', 'PF', 'expense'),
-('YOUR-USER-ID-UUID', 'Moradia', 'PF', 'expense'),
-('YOUR-USER-ID-UUID', 'Lazer', 'PF', 'expense'),
-('YOUR-USER-ID-UUID', 'Saúde', 'PF', 'expense'),
-('YOUR-USER-ID-UUID', 'Educação', 'PF', 'expense'),
-('YOUR-USER-ID-UUID', 'Assinaturas pessoais', 'PF', 'expense'),
-('YOUR-USER-ID-UUID', 'Cartão de crédito', 'PF', 'expense'),
-('YOUR-USER-ID-UUID', 'Reserva pessoal', 'PF', 'expense'),
-('YOUR-USER-ID-UUID', 'Receita PF', 'PF', 'income'),
-('YOUR-USER-ID-UUID', 'Outros PF', 'PF', 'expense');
+('COLOQUE-SEU-USER-ID-AQUI', 'Alimentação', 'PF', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Transporte', 'PF', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Moradia', 'PF', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Lazer', 'PF', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Saúde', 'PF', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Educação', 'PF', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Assinaturas pessoais', 'PF', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Cartão de crédito', 'PF', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Reserva pessoal', 'PF', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Salário/Receita', 'PF', 'income'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Transferência PF', 'PF', 'transfer'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Outros PF', 'PF', 'expense');
 
--- PJ Categories
+-- CATEGORIAS PESSOA JURÍDICA (PJ)
 INSERT INTO public.categories (user_id, name, scope, type) VALUES
-('YOUR-USER-ID-UUID', 'Receita', 'PJ', 'income'),
-('YOUR-USER-ID-UUID', 'Tráfego pago', 'PJ', 'expense'),
-('YOUR-USER-ID-UUID', 'Ferramentas', 'PJ', 'expense'),
-('YOUR-USER-ID-UUID', 'Impostos/DAS', 'PJ', 'expense'),
-('YOUR-USER-ID-UUID', 'Fornecedores', 'PJ', 'expense'),
-('YOUR-USER-ID-UUID', 'Cursos profissionais', 'PJ', 'expense'),
-('YOUR-USER-ID-UUID', 'Equipamentos', 'PJ', 'expense'),
-('YOUR-USER-ID-UUID', 'Retirada do dono', 'PJ', 'expense'),
-('YOUR-USER-ID-UUID', 'Reserva da empresa', 'PJ', 'expense'),
-('YOUR-USER-ID-UUID', 'Outros PJ', 'PJ', 'expense');
+('COLOQUE-SEU-USER-ID-AQUI', 'Receita de Vendas', 'PJ', 'income'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Receita de Serviços', 'PJ', 'income'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Tráfego pago', 'PJ', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Ferramentas de Software', 'PJ', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Impostos/DAS', 'PJ', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Fornecedores', 'PJ', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Cursos profissionais', 'PJ', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Equipamentos', 'PJ', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Retirada do dono (Pró-labore)', 'PJ', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Reserva da empresa', 'PJ', 'expense'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Transferência PJ', 'PJ', 'transfer'),
+('COLOQUE-SEU-USER-ID-AQUI', 'Outros PJ', 'PJ', 'expense');
