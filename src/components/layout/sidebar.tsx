@@ -17,6 +17,7 @@ import {
   Tags
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ThemeToggle } from '@/components/layout/theme-toggle'
 
 const menuItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -67,6 +68,10 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-auto border-t pt-4">
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-sm font-medium text-muted-foreground">Tema</span>
+          <ThemeToggle />
+        </div>
         <Link
           href="/settings"
           className={cn(
