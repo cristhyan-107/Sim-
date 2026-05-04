@@ -1,195 +1,148 @@
-"use client";
+"use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { MOCK_SUMMARY, MOCK_TRANSACTIONS, MOCK_ALERTS } from "@/data/mock-data";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { ArrowDownIcon, ArrowUpIcon, AlertCircle, Building2, UserCircle2, ArrowRightLeft } from "lucide-react";
+import { AlertCircle, ArrowDownIcon, ArrowRightLeft, ArrowUpIcon, Building2, CalendarClock, CreditCard, Repeat, UserCircle2 } from "lucide-react"
 import {
   Bar,
   BarChart,
+  CartesianGrid,
+  Legend,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  Legend,
-  CartesianGrid,
-} from "recharts";
+} from "recharts"
 
-const data = [
-  { name: "Jan", Entradas: 4000, Saidas: 2400 },
-  { name: "Fev", Entradas: 3000, Saidas: 1398 },
-  { name: "Mar", Entradas: 2000, Saidas: 9800 },
-  { name: "Abr", Entradas: 2780, Saidas: 3908 },
-  { name: "Mai", Entradas: 1890, Saidas: 4800 },
-  { name: "Jun", Entradas: 5500, Saidas: 1425 },
-];
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { getCommittedByMonth, getFinanceSummary, getInvoiceTotal, getUpcomingRecurrences } from "@/lib/finance/engine"
+import { useFinance } from "@/lib/finance/store"
+import { formatCurrency, formatDate } from "@/lib/utils"
 
 export default function DashboardPage() {
+  const finance = useFinance()
+  const summary = getFinanceSummary(finance)
+  const committedByMonth = getCommittedByMonth(finance.installments)
+  const chartData = Object.entries(committedByMonth).slice(0, 6).map(([month, amount]) => ({
+    name: month.slice(5, 7) + "/" + month.slice(2, 4),
+    Parcelas: amount,
+    Saidas: finance.transactions.filter((tx) => tx.date.startsWith(month) && tx.type !== "income").reduce((total, tx) => total + tx.amount, 0),
+    Entradas: finance.transactions.filter((tx) => tx.date.startsWith(month) && tx.type === "income").reduce((total, tx) => total + tx.amount, 0),
+  }))
+  const latestTransactions = [...finance.transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
+  const openInvoices = finance.invoices.filter((invoice) => invoice.status !== "paid").slice(0, 4)
+  const upcomingRecurrences = getUpcomingRecurrences(finance.recurrences).slice(0, 4)
+  const alerts = [
+    ...openInvoices.slice(0, 2).map((invoice) => {
+      const card = finance.cards.find((item) => item.id === invoice.card_id)
+      return { scope: card?.scope || "PF", message: `Fatura ${card?.nickname || "cartao"} vence em ${formatDate(invoice.due_date)}.` }
+    }),
+    ...upcomingRecurrences.filter((item) => item.description.toLowerCase().includes("das")).map((item) => ({ scope: "PJ" as const, message: `DAS previsto para ${formatDate(item.next_due_date)}.` })),
+  ]
+
   return (
     <div className="flex-1 space-y-6 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
+      <div>
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <p className="mt-1 text-muted-foreground">Visao consolidada do motor financeiro local.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* PF Balance */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-blue-600 dark:text-blue-400">
-              <UserCircle2 className="h-4 w-4" />
-              Saldo Total PF
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(MOCK_SUMMARY.pf.total_balance)}</div>
-            <p className="text-xs text-muted-foreground">
-              +20.1% em relação ao mês anterior
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* PJ Balance */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-              <Building2 className="h-4 w-4" />
-              Saldo Total PJ
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(MOCK_SUMMARY.pj.total_balance)}</div>
-            <p className="text-xs text-muted-foreground">
-              +15% em relação ao mês anterior
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Entradas */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Entradas do Mês (MEI)</CardTitle>
-            <ArrowUpIcon className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(MOCK_SUMMARY.pj.income_month)}</div>
-          </CardContent>
-        </Card>
-
-        {/* Saídas */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saídas do Mês (MEI)</CardTitle>
-            <ArrowDownIcon className="h-4 w-4 text-rose-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(MOCK_SUMMARY.pj.expense_month)}</div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard title="Saldo Total PF" value={formatCurrency(summary.pf.total_balance)} icon={<UserCircle2 className="h-4 w-4 text-blue-500" />} />
+        <SummaryCard title="Saldo Total PJ" value={formatCurrency(summary.pj.total_balance)} icon={<Building2 className="h-4 w-4 text-emerald-500" />} />
+        <SummaryCard title="Entradas do Mes" value={formatCurrency(summary.pf.income_month + summary.pj.income_month)} icon={<ArrowUpIcon className="h-4 w-4 text-emerald-500" />} />
+        <SummaryCard title="Saidas do Mes" value={formatCurrency(summary.pf.expense_month + summary.pj.expense_month)} icon={<ArrowDownIcon className="h-4 w-4 text-rose-500" />} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard title="Faturas abertas/futuras" value={formatCurrency(openInvoices.reduce((total, invoice) => total + getInvoiceTotal(invoice, finance.installments), 0))} icon={<CreditCard className="h-4 w-4 text-amber-500" />} />
+        <SummaryCard title="Parcelas futuras" value={formatCurrency(summary.futureInstallments)} icon={<CalendarClock className="h-4 w-4 text-rose-500" />} />
+        <SummaryCard title="Recorrencias proximas" value={String(upcomingRecurrences.length)} icon={<Repeat className="h-4 w-4 text-primary" />} />
+        <SummaryCard title="Retiradas do dono" value={formatCurrency(summary.pj.owner_withdrawals)} icon={<ArrowRightLeft className="h-4 w-4 text-amber-500" />} />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-7">
+        <Card className="xl:col-span-4">
           <CardHeader>
-            <CardTitle>Entradas vs Saídas</CardTitle>
-            <CardDescription>
-              Fluxo de caixa dos últimos 6 meses (Visão PJ).
-            </CardDescription>
+            <CardTitle>Fluxo e compromissos</CardTitle>
+            <CardDescription>Entradas, saidas e parcelas futuras por mes.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={data}>
+            <ResponsiveContainer width="100%" height={330}>
+              <BarChart data={chartData.length ? chartData : [{ name: "Atual", Entradas: summary.pj.income_month + summary.pf.income_month, Saidas: summary.pj.expense_month + summary.pf.expense_month, Parcelas: summary.futureInstallments }]}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
-                <XAxis
-                  dataKey="name"
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `R$${value}`}
-                />
-                <Tooltip 
-                  cursor={{fill: 'transparent'}}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
+                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
+                <Tooltip cursor={{ fill: "transparent" }} contentStyle={{ borderRadius: 8, border: "none" }} formatter={(value) => formatCurrency(Number(value))} />
                 <Legend />
                 <Bar dataKey="Entradas" fill="#10b981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Saidas" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Parcelas" fill="#f59e0b" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card className="col-span-3">
+        <Card className="xl:col-span-3">
           <CardHeader>
-            <CardTitle>Últimos Lançamentos</CardTitle>
-            <CardDescription>
-              Suas movimentações mais recentes.
-            </CardDescription>
+            <CardTitle>Ultimos lancamentos</CardTitle>
+            <CardDescription>Movimentacoes atualizadas pelo motor financeiro.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {MOCK_TRANSACTIONS.map((tx) => (
-                <div key={tx.id} className="flex items-center">
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-full border ${tx.scope === 'PF' ? 'border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-900/20' : 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-900/20'}`}>
-                    {tx.type === 'income' ? (
-                      <ArrowUpIcon className="h-4 w-4 text-emerald-500" />
-                    ) : tx.type === 'expense' ? (
-                      <ArrowDownIcon className="h-4 w-4 text-rose-500" />
-                    ) : (
-                      <ArrowRightLeft className="h-4 w-4 text-amber-500" />
-                    )}
-                  </div>
-                  <div className="ml-4 space-y-1">
-                    <p className="text-sm font-medium leading-none">{tx.description}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(tx.date)} • {tx.scope}
-                    </p>
-                  </div>
-                  <div className={`ml-auto font-medium ${tx.type === 'income' ? 'text-emerald-500' : tx.type === 'expense' ? 'text-foreground' : 'text-amber-500'}`}>
-                    {tx.type === 'expense' ? '-' : '+'}{formatCurrency(tx.amount)}
-                  </div>
+          <CardContent className="space-y-5">
+            {latestTransactions.map((tx) => (
+              <div key={tx.id} className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border bg-muted">
+                  {tx.type === "income" ? <ArrowUpIcon className="h-4 w-4 text-emerald-500" /> : tx.type === "transfer" || tx.type === "owner_withdrawal" ? <ArrowRightLeft className="h-4 w-4 text-amber-500" /> : <ArrowDownIcon className="h-4 w-4 text-rose-500" />}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Alertas */}
-      <div className="grid gap-4 md:grid-cols-1">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-              Alertas do Mês
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            {MOCK_ALERTS.map((alert) => (
-              <div
-                key={alert.id}
-                className="flex items-center gap-4 rounded-md border p-4"
-              >
-                <AlertCircle className={`h-5 w-5 ${alert.type === 'destructive' ? 'text-destructive' : 'text-amber-500'}`} />
-                <div className="flex-1 space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {alert.message}
-                  </p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{tx.description}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(tx.date)} - {tx.scope}</p>
                 </div>
-                <Badge variant="outline" className={alert.scope === 'PF' ? 'border-blue-500 text-blue-500' : 'border-emerald-500 text-emerald-500'}>{alert.scope}</Badge>
+                <div className="text-sm font-semibold">{tx.type === "income" ? "+" : tx.type === "transfer" ? "" : "-"}{formatCurrency(tx.amount)}</div>
               </div>
             ))}
           </CardContent>
         </Card>
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-3">
+        <InfoPanel title="Faturas abertas e futuras" items={openInvoices.map((invoice) => {
+          const card = finance.cards.find((item) => item.id === invoice.card_id)
+          return { label: `${card?.nickname} ${invoice.invoice_month.slice(0, 7)}`, value: formatCurrency(getInvoiceTotal(invoice, finance.installments)), scope: card?.scope || "PF" }
+        })} />
+        <InfoPanel title="Recorrencias proximas" items={upcomingRecurrences.map((item) => ({ label: `${item.description} - ${formatDate(item.next_due_date)}`, value: formatCurrency(item.amount), scope: item.scope }))} />
+        <InfoPanel title="Alertas" items={alerts.map((item) => ({ label: item.message, value: "", scope: item.scope }))} alert />
+      </div>
     </div>
-  );
+  )
+}
+
+function SummaryCard({ title, value, icon }: { title: string; value: string; icon: React.ReactNode }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent><div className="text-2xl font-bold">{value}</div></CardContent>
+    </Card>
+  )
+}
+
+function InfoPanel({ title, items, alert }: { title: string; items: { label: string; value: string; scope: "PF" | "PJ" }[]; alert?: boolean }) {
+  return (
+    <Card>
+      <CardHeader><CardTitle className="flex items-center gap-2">{alert && <AlertCircle className="h-5 w-5 text-amber-500" />}{title}</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        {items.length === 0 ? <p className="text-sm text-muted-foreground">Nada pendente.</p> : items.map((item, index) => (
+          <div key={`${item.label}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+            <span>{item.label}</span>
+            <div className="flex items-center gap-2">
+              {item.value && <strong>{item.value}</strong>}
+              <Badge variant="outline" className={item.scope === "PF" ? "border-blue-500 text-blue-600" : "border-emerald-500 text-emerald-600"}>{item.scope}</Badge>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
 }
