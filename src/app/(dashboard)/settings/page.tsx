@@ -112,7 +112,8 @@ export default function SettingsPage() {
           <Button variant="outline" onClick={() => downloadCsv(`fechamento-${month}.csv`, [{ mes: month, ...closing }])}>Fechamento CSV</Button>
           <Button variant="outline" onClick={() => downloadCsv(datedName("dados-pf"), csvRows.transactions(finance).filter((item) => item.escopo === "PF"))}>Dados PF CSV</Button>
           <Button variant="outline" onClick={() => downloadCsv(datedName("dados-pj"), csvRows.transactions(finance).filter((item) => item.escopo === "PJ"))}>Dados PJ CSV</Button>
-          <Button variant="destructive" onClick={finance.resetMockData}><Trash2 className="mr-2 h-4 w-4" />Apagar dados de teste</Button>
+          <Button variant="outline" onClick={finance.resetMockData}>Popular dados de exemplo</Button>
+          <Button variant="destructive" onClick={finance.clearAllData}><Trash2 className="mr-2 h-4 w-4" />Limpar dados</Button>
         </CardContent>
       </Card>
 
@@ -120,18 +121,18 @@ export default function SettingsPage() {
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><Database className="h-5 w-5" />Sistema</CardTitle></CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
-            <Status label="Versao" value="0.1.0 - Fase 4" />
-            <Status label="Backend" value="Mock/local preparado para Supabase" />
+            <Status label="Versao" value="0.1.0 - Fase 5" />
+            <Status label="Backend" value={finance.isSupabaseConnected ? "Supabase conectado" : "Mock/local sem sessao Supabase"} />
             <Status label="Modo escuro" value="Ativo via next-themes" />
             <Status label="Validacoes" value="React Hook Form + Zod" />
             <Status label="Seguranca cartoes" value="Sem dados sensiveis" />
-            <Status label="Supabase" value="Clientes e SQL prontos" />
+            <Status label="Supabase" value="Auth, repositorio e SQL com RLS" />
           </CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle>Mock data / ambiente</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <Textarea readOnly rows={7} value={`Ambiente atual: mock/local state\nTabelas planejadas: profiles, accounts, cards, categories, transactions, installment_purchases, installments, invoices, recurrences, budgets, monthly_closings, audit_logs\nRLS: planejado em sql/rls.sql\nProxima troca: substituir store local por repositorios Supabase.`} />
+            <Textarea readOnly rows={7} value={`Ambiente atual: ${finance.isSupabaseConnected ? "Supabase/PostgreSQL autenticado" : "mock/local state sem sessao Supabase"}\nTabelas: profiles, accounts, cards, categories, transactions, installment_purchases, installments, invoices, recurrences, budgets, monthly_closings, audit_logs\nRLS: ativo via sql/rls.sql\nPersistencia: store financeiro sincroniza com Supabase quando ha sessao autenticada.`} />
             <Button onClick={saveSettings}>Salvar preferencias locais</Button>
           </CardContent>
         </Card>

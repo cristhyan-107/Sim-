@@ -1,28 +1,28 @@
-import { login } from './actions'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { login } from "./actions"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string }
+  searchParams: Promise<{ error?: string }>
 }) {
+  const params = await searchParams
+
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-muted/50">
-      <Card className="w-[400px]">
+    <div className="flex h-screen w-screen items-center justify-center bg-muted/50 p-4">
+      <Card className="w-full max-w-[400px]">
         <CardHeader>
           <CardTitle>Organiza MEI</CardTitle>
-          <CardDescription>
-            Faça login para acessar seu painel financeiro.
-          </CardDescription>
+          <CardDescription>Acesse seu painel financeiro privado.</CardDescription>
         </CardHeader>
         <form>
           <CardContent className="space-y-4">
-            {searchParams?.error && (
+            {params?.error && (
               <div className="text-sm font-medium text-destructive">
-                E-mail ou senha incorretos.
+                E-mail, senha ou usuario autorizado invalido.
               </div>
             )}
             <div className="space-y-2">
@@ -40,6 +40,9 @@ export default function LoginPage({
             </Button>
           </CardFooter>
         </form>
+        <p className="px-6 pb-6 text-xs text-muted-foreground">
+          Cadastro publico desabilitado. Crie o primeiro usuario no painel Auth do Supabase.
+        </p>
       </Card>
     </div>
   )

@@ -53,6 +53,7 @@ export type Category = {
   name: string
   scope: Scope
   type: "income" | "expense" | "transfer"
+  status?: "active" | "inactive"
 }
 
 export type Transaction = {

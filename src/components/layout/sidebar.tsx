@@ -23,6 +23,7 @@ import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
 
 const menuItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -80,6 +81,15 @@ function Brand({ className }: { className?: string }) {
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
 
+  async function handleLogout() {
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } finally {
+      window.location.href = "/login"
+    }
+  }
+
   return (
     <div className="flex min-h-[calc(100vh-7rem)] flex-col p-4 md:min-h-0 md:flex-1 md:p-0">
       <nav className="flex-1 space-y-1">
@@ -118,7 +128,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <Settings className="h-4 w-4" />
           Configuracoes
         </Link>
-        <button className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive">
+        <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive">
           <LogOut className="h-4 w-4" />
           Sair
         </button>

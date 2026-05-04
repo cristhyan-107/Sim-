@@ -1,49 +1,45 @@
--- ==========================================
--- SEED DE CATEGORIAS PADRÃO (Organiza MEI)
--- ==========================================
--- Este script localiza automaticamente o seu primeiro usuário cadastrado
--- no Supabase (auth.users) e cria as categorias padrão para ele.
+-- Organiza MEI - Seed de categorias padrao para o primeiro usuario Auth.
 
 DO $$
 DECLARE
-    v_user_id uuid;
+  v_user_id UUID;
+  v_email TEXT;
 BEGIN
-    -- Busca o ID do primeiro usuário cadastrado
-    SELECT id INTO v_user_id FROM auth.users ORDER BY created_at ASC LIMIT 1;
-    
-    IF v_user_id IS NULL THEN
-        RAISE EXCEPTION 'Nenhum usuário encontrado! Por favor, crie um usuário na aba "Authentication" do Supabase antes de rodar este seed.';
-    END IF;
+  SELECT id, email INTO v_user_id, v_email
+  FROM auth.users
+  ORDER BY created_at ASC
+  LIMIT 1;
 
-    -- CATEGORIAS PESSOA FÍSICA (PF)
-    INSERT INTO public.categories (user_id, name, scope, type) VALUES
-    (v_user_id, 'Alimentação', 'PF', 'expense'),
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Nenhum usuario encontrado. Crie um usuario em Authentication antes de executar o seed.';
+  END IF;
+
+  INSERT INTO public.profiles (user_id, name, email)
+  VALUES (v_user_id, COALESCE(split_part(v_email, '@', 1), 'Organiza MEI'), v_email)
+  ON CONFLICT (user_id) DO UPDATE SET email = EXCLUDED.email;
+
+  INSERT INTO public.categories (user_id, name, scope, type) VALUES
+    (v_user_id, 'Alimentacao', 'PF', 'expense'),
     (v_user_id, 'Transporte', 'PF', 'expense'),
     (v_user_id, 'Moradia', 'PF', 'expense'),
     (v_user_id, 'Lazer', 'PF', 'expense'),
-    (v_user_id, 'Saúde', 'PF', 'expense'),
-    (v_user_id, 'Educação', 'PF', 'expense'),
+    (v_user_id, 'Saude', 'PF', 'expense'),
+    (v_user_id, 'Educacao', 'PF', 'expense'),
     (v_user_id, 'Assinaturas pessoais', 'PF', 'expense'),
-    (v_user_id, 'Cartão de crédito', 'PF', 'expense'),
+    (v_user_id, 'Cartao de credito', 'PF', 'expense'),
     (v_user_id, 'Reserva pessoal', 'PF', 'expense'),
-    (v_user_id, 'Salário/Receita', 'PF', 'income'),
-    (v_user_id, 'Transferência PF', 'PF', 'transfer'),
-    (v_user_id, 'Outros PF', 'PF', 'expense');
-
-    -- CATEGORIAS PESSOA JURÍDICA (PJ)
-    INSERT INTO public.categories (user_id, name, scope, type) VALUES
-    (v_user_id, 'Receita de Vendas', 'PJ', 'income'),
-    (v_user_id, 'Receita de Serviços', 'PJ', 'income'),
-    (v_user_id, 'Tráfego pago', 'PJ', 'expense'),
-    (v_user_id, 'Ferramentas de Software', 'PJ', 'expense'),
+    (v_user_id, 'Outros PF', 'PF', 'expense'),
+    (v_user_id, 'Receita', 'PJ', 'income'),
+    (v_user_id, 'Trafego pago', 'PJ', 'expense'),
+    (v_user_id, 'Ferramentas', 'PJ', 'expense'),
     (v_user_id, 'Impostos/DAS', 'PJ', 'expense'),
     (v_user_id, 'Fornecedores', 'PJ', 'expense'),
     (v_user_id, 'Cursos profissionais', 'PJ', 'expense'),
     (v_user_id, 'Equipamentos', 'PJ', 'expense'),
-    (v_user_id, 'Retirada do dono (Pró-labore)', 'PJ', 'expense'),
+    (v_user_id, 'Retirada do dono', 'PJ', 'expense'),
     (v_user_id, 'Reserva da empresa', 'PJ', 'expense'),
-    (v_user_id, 'Transferência PJ', 'PJ', 'transfer'),
-    (v_user_id, 'Outros PJ', 'PJ', 'expense');
+    (v_user_id, 'Outros PJ', 'PJ', 'expense')
+  ON CONFLICT (user_id, scope, name) DO NOTHING;
 
-    RAISE NOTICE 'Categorias criadas com sucesso para o usuário %', v_user_id;
+  RAISE NOTICE 'Seed concluido para usuario %', v_user_id;
 END $$;

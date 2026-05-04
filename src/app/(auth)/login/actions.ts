@@ -20,6 +20,23 @@ export async function login(formData: FormData) {
     redirect('/login?error=true')
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const authorizedEmail = process.env.AUTHORIZED_EMAIL
+  if (authorizedEmail && user?.email?.toLowerCase() !== authorizedEmail.toLowerCase()) {
+    await supabase.auth.signOut()
+    redirect('/login?error=unauthorized')
+  }
+
   revalidatePath('/', 'layout')
   redirect('/dashboard')
+}
+
+export async function logout() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  revalidatePath('/', 'layout')
+  redirect('/login')
 }
