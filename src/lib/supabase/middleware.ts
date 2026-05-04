@@ -40,16 +40,16 @@ export async function updateSession(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const isLogin = request.nextUrl.pathname.startsWith('/login');
-    const isAuth = request.nextUrl.pathname.startsWith('/auth');
+    const publicAuthPaths = ['/login', '/sign-up', '/forgot-password', '/reset-password', '/verify-email', '/auth'];
+    const isPublicAuthPath = publicAuthPaths.some((path) => request.nextUrl.pathname.startsWith(path));
 
-    if (!user && !isLogin && !isAuth) {
+    if (!user && !isPublicAuthPath) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       return NextResponse.redirect(url);
     }
 
-    if (user && isLogin) {
+    if (user && request.nextUrl.pathname === '/login') {
       const url = request.nextUrl.clone();
       url.pathname = '/dashboard';
       return NextResponse.redirect(url);

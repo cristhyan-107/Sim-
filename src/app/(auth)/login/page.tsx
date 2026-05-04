@@ -1,49 +1,18 @@
-import { login } from "./actions"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import * as React from "react"
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>
-}) {
-  const params = await searchParams
+import { AuthCard } from "@/components/auth/auth-card"
+import { LoginForm } from "@/components/auth/login-form"
 
+export default function LoginPage() {
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-muted/50 p-4">
-      <Card className="w-full max-w-[400px]">
-        <CardHeader>
-          <CardTitle>Organiza MEI</CardTitle>
-          <CardDescription>Acesse seu painel financeiro privado.</CardDescription>
-        </CardHeader>
-        <form>
-          <CardContent className="space-y-4">
-            {params?.error && (
-              <div className="text-sm font-medium text-destructive">
-                E-mail, senha ou usuario autorizado invalido.
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input id="email" name="email" type="email" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input id="password" name="password" type="password" required />
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full" formAction={login}>
-              Entrar
-            </Button>
-          </CardFooter>
-        </form>
-        <p className="px-6 pb-6 text-xs text-muted-foreground">
-          Cadastro publico desabilitado. Crie o primeiro usuario no painel Auth do Supabase.
-        </p>
-      </Card>
-    </div>
+    <AuthCard
+      eyebrow="Acesso"
+      title="Entrar no Organiza MEI"
+      subtitle="Acesse seu painel financeiro privado com seguranca e continue de onde parou."
+    >
+      <React.Suspense fallback={<div className="h-64 animate-pulse rounded-lg bg-muted" />}>
+        <LoginForm />
+      </React.Suspense>
+    </AuthCard>
   )
 }
