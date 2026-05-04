@@ -259,6 +259,65 @@ export const MOCK_RECURRENCES = [
   },
 ]
 
+export const MOCK_BUDGETS = [
+  {
+    id: "orc_1",
+    category_id: "cat_pf_1",
+    scope: "PF" as const,
+    month: currentMonth,
+    limit_amount: 800,
+    alert_percentage: 80,
+    status: "active" as const,
+    notes: "Alimentacao mensal",
+  },
+  {
+    id: "orc_2",
+    category_id: "cat_pf_3",
+    scope: "PF" as const,
+    month: currentMonth,
+    limit_amount: 300,
+    alert_percentage: 80,
+    status: "active" as const,
+  },
+  {
+    id: "orc_3",
+    category_id: "cat_pj_2",
+    scope: "PJ" as const,
+    month: currentMonth,
+    limit_amount: 500,
+    alert_percentage: 90,
+    status: "active" as const,
+  },
+  {
+    id: "orc_4",
+    category_id: "cat_pj_5",
+    scope: "PJ" as const,
+    month: currentMonth,
+    limit_amount: 200,
+    alert_percentage: 80,
+    status: "active" as const,
+  },
+  {
+    id: "orc_5",
+    category_id: "cat_pj_3",
+    scope: "PJ" as const,
+    month: currentMonth,
+    limit_amount: 100,
+    alert_percentage: 80,
+    status: "active" as const,
+  },
+]
+
+export const MOCK_MONTHLY_CLOSINGS = [
+  {
+    id: "fech_1",
+    month: addMonthsToMonth(currentMonth, -1),
+    notes: "Mes anterior revisado sem pendencias criticas.",
+    reviewed: true,
+    reviewed_at: subDays(today, 3).toISOString(),
+  },
+]
+
 export const MOCK_ALERTS = [
   { id: 1, type: "warning", message: "Fatura Nubank PF vence nos proximos dias.", scope: "PF" as const },
   { id: 2, type: "destructive", message: "DAS deste mes ainda precisa de acompanhamento.", scope: "PJ" as const },
@@ -290,4 +349,6 @@ export const INITIAL_FINANCE_STATE: FinanceState = {
   installments: MOCK_INSTALLMENT_ITEMS,
   invoices: MOCK_INVOICES,
   recurrences: MOCK_RECURRENCES,
+  budgets: MOCK_BUDGETS,
+  monthlyClosings: MOCK_MONTHLY_CLOSINGS,
 }

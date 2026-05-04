@@ -4,9 +4,9 @@ import { FinanceProvider } from '@/lib/finance/store';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <FinanceProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex min-h-screen w-full flex-col md:flex-row">
         <Sidebar />
-        <main className="flex-1 bg-muted/20">
+        <main className="min-w-0 flex-1 bg-muted/20">
           {children}
         </main>
       </div>

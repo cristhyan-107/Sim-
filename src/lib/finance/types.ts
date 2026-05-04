@@ -22,6 +22,7 @@ export type InstallmentStatus = "pending" | "paid" | "cancelled"
 export type PurchaseStatus = "active" | "cancelled" | "finished"
 export type RecurrenceStatus = "active" | "paused" | "finished"
 export type RecurrenceFrequency = "weekly" | "monthly" | "yearly"
+export type BudgetStatus = "active" | "inactive"
 
 export type Account = {
   id: string
@@ -127,6 +128,25 @@ export type Recurrence = {
   notes?: string
 }
 
+export type Budget = {
+  id: string
+  category_id: string
+  scope: Scope
+  month: string
+  limit_amount: number
+  alert_percentage: number
+  status: BudgetStatus
+  notes?: string
+}
+
+export type MonthlyClosing = {
+  id: string
+  month: string
+  notes?: string
+  reviewed: boolean
+  reviewed_at?: string
+}
+
 export type FinanceState = {
   accounts: Account[]
   cards: CardAccount[]
@@ -136,4 +156,6 @@ export type FinanceState = {
   installments: Installment[]
   invoices: Invoice[]
   recurrences: Recurrence[]
+  budgets: Budget[]
+  monthlyClosings: MonthlyClosing[]
 }

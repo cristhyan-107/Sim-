@@ -1,5 +1,6 @@
 import {
   Account,
+  Budget,
   CardAccount,
   FinanceState,
   Installment,
@@ -137,6 +138,95 @@ export function getCommittedByMonth(installments: Installment[]) {
       acc[key] = (acc[key] || 0) + item.amount
       return acc
     }, {})
+}
+
+export function getCategorySpent(state: FinanceState, categoryId: string, month: string) {
+  const expenseTypes = ["expense", "invoice_payment", "das_payment", "owner_withdrawal"]
+  const direct = state.transactions
+    .filter((item) => item.date.startsWith(month.slice(0, 7)))
+    .filter((item) => item.category_id === categoryId && expenseTypes.includes(item.type))
+    .reduce((total, item) => total + item.amount, 0)
+  const installments = state.installments
+    .filter((item) => item.due_month.startsWith(month.slice(0, 7)))
+    .filter((item) => item.category_id === categoryId && item.status !== "cancelled")
+    .reduce((total, item) => total + item.amount, 0)
+  return direct + installments
+}
+
+export function getBudgetUsage(state: FinanceState, budget: Budget) {
+  const spent = getCategorySpent(state, budget.category_id, budget.month)
+  const percent = budget.limit_amount > 0 ? (spent / budget.limit_amount) * 100 : 0
+  return {
+    spent,
+    percent,
+    remaining: Math.max(budget.limit_amount - spent, 0),
+    exceeded: Math.max(spent - budget.limit_amount, 0),
+    level: percent >= 100 ? "exceeded" : percent >= 90 ? "critical" : percent >= budget.alert_percentage ? "warning" : "ok",
+  }
+}
+
+export function getMonthTransactions(state: FinanceState, month: string) {
+  return state.transactions.filter((item) => item.date.startsWith(month.slice(0, 7)))
+}
+
+export function getMonthlyClosingSnapshot(state: FinanceState, month: string) {
+  const transactions = getMonthTransactions(state, month)
+  const expenseTypes = ["expense", "invoice_payment", "das_payment"]
+  const pfIncome = transactions.filter((item) => item.scope === "PF" && item.type === "income").reduce((total, item) => total + item.amount, 0)
+  const pjIncome = transactions.filter((item) => item.scope === "PJ" && item.type === "income").reduce((total, item) => total + item.amount, 0)
+  const pfExpense = transactions.filter((item) => item.scope === "PF" && expenseTypes.includes(item.type)).reduce((total, item) => total + item.amount, 0)
+  const pjExpense = transactions.filter((item) => item.scope === "PJ" && expenseTypes.includes(item.type)).reduce((total, item) => total + item.amount, 0)
+  const ownerWithdrawals = transactions.filter((item) => item.type === "owner_withdrawal").reduce((total, item) => total + item.amount, 0)
+  const dasPaid = transactions.some((item) => item.type === "das_payment" && item.date.startsWith(month.slice(0, 7)))
+  const invoices = state.invoices.filter((item) => item.invoice_month.startsWith(month.slice(0, 7)))
+  const paidInvoices = invoices.filter((item) => item.status === "paid").length
+  const openInvoices = invoices.filter((item) => item.status !== "paid").length
+  const futureInstallments = state.installments
+    .filter((item) => item.status === "pending" && item.due_month > `${month.slice(0, 7)}-01`)
+    .reduce((total, item) => total + item.amount, 0)
+  const overdueInvoices = invoices.filter((item) => item.status !== "paid" && item.due_date < new Date().toISOString().slice(0, 10)).length
+  const exceededBudgets = state.budgets.filter((budget) => budget.month.startsWith(month.slice(0, 7)) && getBudgetUsage(state, budget).level === "exceeded").length
+  const accounts = applyTransactionsToAccounts(state.accounts, state.transactions.filter((item) => item.date <= `${month.slice(0, 7)}-31`))
+
+  return {
+    pfIncome,
+    pfExpense,
+    pfResult: pfIncome - pfExpense,
+    pjIncome,
+    pjExpense,
+    pjResult: pjIncome - pjExpense,
+    ownerWithdrawals,
+    dasPaid,
+    paidInvoices,
+    openInvoices,
+    pfEndingCash: accounts.filter((item) => item.scope === "PF").reduce((total, item) => total + item.current_balance, 0),
+    pjEndingCash: accounts.filter((item) => item.scope === "PJ").reduce((total, item) => total + item.current_balance, 0),
+    futureInstallments,
+    overdueInvoices,
+    exceededBudgets,
+  }
+}
+
+export function getMonthlySeries(state: FinanceState, months: string[]) {
+  let pfBalance = state.accounts.filter((item) => item.scope === "PF").reduce((total, item) => total + item.initial_balance, 0)
+  let pjBalance = state.accounts.filter((item) => item.scope === "PJ").reduce((total, item) => total + item.initial_balance, 0)
+
+  return months.map((month) => {
+    const snapshot = getMonthlyClosingSnapshot(state, `${month}-01`)
+    pfBalance += snapshot.pfResult + snapshot.ownerWithdrawals
+    pjBalance += snapshot.pjResult - snapshot.ownerWithdrawals
+    return {
+      month,
+      Entradas: snapshot.pfIncome + snapshot.pjIncome,
+      Saidas: snapshot.pfExpense + snapshot.pjExpense,
+      PF: snapshot.pfExpense,
+      PJ: snapshot.pjExpense,
+      ResultadoMEI: snapshot.pjResult,
+      Retiradas: snapshot.ownerWithdrawals,
+      SaldoPF: pfBalance,
+      SaldoPJ: pjBalance,
+    }
+  })
 }
 
 export function getFinanceSummary(state: FinanceState) {

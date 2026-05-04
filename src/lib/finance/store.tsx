@@ -4,8 +4,10 @@ import * as React from "react"
 import { INITIAL_FINANCE_STATE } from "@/data/mock-data"
 import {
   FinanceState,
+  Budget,
   InstallmentPurchase,
   Invoice,
+  MonthlyClosing,
   Recurrence,
   Transaction,
 } from "@/lib/finance/types"
@@ -30,6 +32,11 @@ type FinanceContextValue = FinanceState & {
   updateRecurrence: (id: string, recurrence: Omit<Recurrence, "id">) => void
   setRecurrenceStatus: (id: string, status: Recurrence["status"]) => void
   generateTransactionFromRecurrence: (id: string) => void
+  addBudget: (budget: Omit<Budget, "id" | "status">) => void
+  updateBudget: (id: string, budget: Omit<Budget, "id" | "status">) => void
+  deleteBudget: (id: string) => void
+  saveMonthlyClosing: (closing: Omit<MonthlyClosing, "id">) => void
+  resetMockData: () => void
 }
 
 const FinanceContext = React.createContext<FinanceContextValue | null>(null)
@@ -190,6 +197,51 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
+  const addBudget = React.useCallback((budget: Omit<Budget, "id" | "status">) => {
+    setState((current) =>
+      syncState({
+        ...current,
+        budgets: [{ ...budget, id: uid("orc"), status: "active" }, ...current.budgets],
+      })
+    )
+  }, [])
+
+  const updateBudget = React.useCallback((id: string, budget: Omit<Budget, "id" | "status">) => {
+    setState((current) =>
+      syncState({
+        ...current,
+        budgets: current.budgets.map((item) => (item.id === id ? { ...budget, id, status: "active" } : item)),
+      })
+    )
+  }, [])
+
+  const deleteBudget = React.useCallback((id: string) => {
+    setState((current) =>
+      syncState({
+        ...current,
+        budgets: current.budgets.map((item) => (item.id === id ? { ...item, status: "inactive" } : item)),
+      })
+    )
+  }, [])
+
+  const saveMonthlyClosing = React.useCallback((closing: Omit<MonthlyClosing, "id">) => {
+    setState((current) => {
+      const existing = current.monthlyClosings.find((item) => item.month === closing.month)
+      return syncState({
+        ...current,
+        monthlyClosings: existing
+          ? current.monthlyClosings.map((item) => (item.id === existing.id ? { ...closing, id: existing.id } : item))
+          : [{ ...closing, id: uid("fech") }, ...current.monthlyClosings],
+      })
+    })
+  }, [])
+
+  const resetMockData = React.useCallback(() => {
+    if (window.confirm("Apagar dados de teste e restaurar o mock inicial?")) {
+      setState(syncState(INITIAL_FINANCE_STATE))
+    }
+  }, [])
+
   const value = React.useMemo(
     () => ({
       ...state,
@@ -204,6 +256,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       updateRecurrence,
       setRecurrenceStatus,
       generateTransactionFromRecurrence,
+      addBudget,
+      updateBudget,
+      deleteBudget,
+      saveMonthlyClosing,
+      resetMockData,
     }),
     [
       state,
@@ -218,6 +275,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       updateRecurrence,
       setRecurrenceStatus,
       generateTransactionFromRecurrence,
+      addBudget,
+      updateBudget,
+      deleteBudget,
+      saveMonthlyClosing,
+      resetMockData,
     ]
   )
 
