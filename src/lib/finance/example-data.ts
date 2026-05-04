@@ -1,6 +1,9 @@
 import { addMonthsToMonth, generateInstallments, getInvoiceDueDate, toMonth, uid } from "@/lib/finance/engine"
 import { Account, Budget, CardAccount, Category, FinanceState, InstallmentPurchase, Invoice, Recurrence, Transaction } from "@/lib/finance/types"
 
+const EXAMPLE_SNAPSHOT_PREFIX = "organiza-mei:example-data"
+const EXAMPLE_CLEARED_PREFIX = "organiza-mei:example-data-cleared"
+
 function month(offset = 0) {
   return addMonthsToMonth(toMonth(new Date()), offset)
 }
@@ -84,5 +87,86 @@ export function markFinanceStateAsExample(state: FinanceState): FinanceState {
     recurrences: state.recurrences.map((item) => ({ ...item, example_data: true })),
     budgets: state.budgets.map((item) => ({ ...item, example_data: true })),
     monthlyClosings: state.monthlyClosings.map((item) => ({ ...item, example_data: true })),
+  }
+}
+
+function canUseStorage() {
+  return typeof window !== "undefined"
+}
+
+function snapshotKey(userId: string) {
+  return `${EXAMPLE_SNAPSHOT_PREFIX}:${userId}`
+}
+
+function clearedKey(userId: string) {
+  return `${EXAMPLE_CLEARED_PREFIX}:${userId}`
+}
+
+export function hasExampleDataCleared(userId: string | null) {
+  if (!canUseStorage() || !userId) return false
+  return window.localStorage.getItem(clearedKey(userId)) === "true"
+}
+
+export function markExampleDataCleared(userId: string | null) {
+  if (!canUseStorage() || !userId) return
+  window.localStorage.setItem(clearedKey(userId), "true")
+  window.localStorage.removeItem(snapshotKey(userId))
+}
+
+export function unmarkExampleDataCleared(userId: string | null) {
+  if (!canUseStorage() || !userId) return
+  window.localStorage.removeItem(clearedKey(userId))
+}
+
+export function readExampleDataSnapshot(userId: string | null): FinanceState | null {
+  if (!canUseStorage() || !userId) return null
+  try {
+    const raw = window.localStorage.getItem(snapshotKey(userId))
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as FinanceState
+    return markFinanceStateAsExample(parsed)
+  } catch {
+    return null
+  }
+}
+
+export function writeExampleDataSnapshot(userId: string | null, state: FinanceState) {
+  if (!canUseStorage() || !userId) return
+  window.localStorage.setItem(snapshotKey(userId), JSON.stringify(markFinanceStateAsExample(state)))
+  window.localStorage.removeItem(clearedKey(userId))
+}
+
+export function clearExampleDataSnapshot(userId: string | null) {
+  if (!canUseStorage() || !userId) return
+  window.localStorage.removeItem(snapshotKey(userId))
+}
+
+export function hasAnyExampleData(state: FinanceState) {
+  return [
+    ...state.accounts,
+    ...state.cards,
+    ...state.categories,
+    ...state.transactions,
+    ...state.installmentPurchases,
+    ...state.installments,
+    ...state.invoices,
+    ...state.recurrences,
+    ...state.budgets,
+    ...state.monthlyClosings,
+  ].some((item) => item.example_data)
+}
+
+export function createEmptyFinanceState(): FinanceState {
+  return {
+    accounts: [],
+    cards: [],
+    categories: [],
+    transactions: [],
+    installmentPurchases: [],
+    installments: [],
+    invoices: [],
+    recurrences: [],
+    budgets: [],
+    monthlyClosings: [],
   }
 }

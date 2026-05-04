@@ -2,7 +2,18 @@
 
 import * as React from "react"
 import { INITIAL_FINANCE_STATE } from "@/data/mock-data"
-import { createExampleFinanceData, markFinanceStateAsExample } from "@/lib/finance/example-data"
+import {
+  clearExampleDataSnapshot,
+  createEmptyFinanceState,
+  createExampleFinanceData,
+  hasAnyExampleData,
+  hasExampleDataCleared,
+  markExampleDataCleared,
+  markFinanceStateAsExample,
+  readExampleDataSnapshot,
+  unmarkExampleDataCleared,
+  writeExampleDataSnapshot,
+} from "@/lib/finance/example-data"
 import {
   Account,
   CardAccount,
@@ -108,16 +119,43 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false)
         return
       }
+      let resolvedUserId: string | null = null
       try {
         const id = await currentUserId(supabase)
         if (!mounted) return
+        resolvedUserId = id
         setUserId(id)
         if (id) {
           const remote = await loadFinanceState(supabase)
-          if (mounted) setState(syncState(remote))
+          if (!mounted) return
+          if (hasAnyExampleData(remote)) {
+            setState(syncState(remote))
+            writeExampleDataSnapshot(id, remote)
+          } else {
+            const snapshot = readExampleDataSnapshot(id)
+            if (snapshot && hasAnyExampleData(snapshot)) {
+              setState(syncState(snapshot))
+            } else if (!hasExampleDataCleared(id)) {
+              const seeded = syncState(markFinanceStateAsExample(INITIAL_FINANCE_STATE))
+              setState(seeded)
+              writeExampleDataSnapshot(id, seeded)
+            } else {
+              setState(syncState(createEmptyFinanceState()))
+            }
+          }
         }
       } catch (error) {
         console.error("Erro ao carregar dados do Supabase:", error)
+        if (mounted && resolvedUserId && !hasExampleDataCleared(resolvedUserId)) {
+          const snapshot = readExampleDataSnapshot(resolvedUserId)
+          if (snapshot && hasAnyExampleData(snapshot)) {
+            setState(syncState(snapshot))
+          } else {
+            const seeded = syncState(markFinanceStateAsExample(INITIAL_FINANCE_STATE))
+            setState(seeded)
+            writeExampleDataSnapshot(resolvedUserId, seeded)
+          }
+        }
       } finally {
         if (mounted) setIsLoading(false)
       }
@@ -513,9 +551,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const resetMockData = React.useCallback(() => {
     if (window.confirm("Popular dados de exemplo em memoria local?")) {
-      setState(syncState(markFinanceStateAsExample(INITIAL_FINANCE_STATE)))
+      const seeded = syncState(markFinanceStateAsExample(INITIAL_FINANCE_STATE))
+      setState(seeded)
+      if (userId) {
+        unmarkExampleDataCleared(userId)
+        writeExampleDataSnapshot(userId, seeded)
+      }
     }
-  }, [])
+  }, [userId])
 
   const persistStateRows = React.useCallback((example: FinanceState) => {
     persist(async (uidValue) => {
@@ -539,24 +582,45 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const populateExampleData = React.useCallback(() => {
     if (!window.confirm("Criar dados ficticios de demonstracao para este usuario? Eles serao marcados como exemplo.")) return
     const example = createExampleFinanceData(state.categories)
-    setState((current) => syncState({
-      accounts: [...example.accounts, ...current.accounts],
-      cards: [...example.cards, ...current.cards],
-      categories: [...example.categories, ...current.categories],
-      transactions: [...example.transactions, ...current.transactions],
-      installmentPurchases: [...example.installmentPurchases, ...current.installmentPurchases],
-      installments: [...example.installments, ...current.installments],
-      invoices: [...example.invoices, ...current.invoices],
-      recurrences: [...example.recurrences, ...current.recurrences],
-      budgets: [...example.budgets, ...current.budgets],
-      monthlyClosings: current.monthlyClosings,
-    }))
+    const nextState = syncState({
+      accounts: [...example.accounts, ...state.accounts],
+      cards: [...example.cards, ...state.cards],
+      categories: [...example.categories, ...state.categories],
+      transactions: [...example.transactions, ...state.transactions],
+      installmentPurchases: [...example.installmentPurchases, ...state.installmentPurchases],
+      installments: [...example.installments, ...state.installments],
+      invoices: [...example.invoices, ...state.invoices],
+      recurrences: [...example.recurrences, ...state.recurrences],
+      budgets: [...example.budgets, ...state.budgets],
+      monthlyClosings: state.monthlyClosings,
+    })
+    setState(nextState)
+    if (userId) {
+      unmarkExampleDataCleared(userId)
+      writeExampleDataSnapshot(userId, nextState)
+    }
     persistStateRows(example)
-  }, [persistStateRows, state.categories])
+  }, [
+    persistStateRows,
+    state.accounts,
+    state.budgets,
+    state.categories,
+    state.cards,
+    state.installmentPurchases,
+    state.installments,
+    state.invoices,
+    state.monthlyClosings,
+    state.recurrences,
+    state.transactions,
+    userId,
+  ])
 
   const clearExampleDataForCurrentUser = React.useCallback(async () => {
     const previous = state
     setState((current) => syncState(stripExampleData(current)))
+    if (userId) {
+      markExampleDataCleared(userId)
+    }
 
     try {
       if (supabase && userId) {
@@ -565,7 +629,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       setState(syncState(previous))
+      if (userId) {
+        unmarkExampleDataCleared(userId)
+        writeExampleDataSnapshot(userId, previous)
+      }
       throw error
+    }
+
+    if (userId) {
+      clearExampleDataSnapshot(userId)
     }
   }, [state, stripExampleData, supabase, userId])
 
@@ -581,24 +653,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const clearAllData = React.useCallback(() => {
     if (!window.confirm("Limpar dados financeiros deste usuario? Esta acao remove os dados locais e, se autenticado, tambem os dados no Supabase.")) return
-    const empty: FinanceState = {
-      accounts: [],
-      cards: [],
-      categories: [],
-      transactions: [],
-      installmentPurchases: [],
-      installments: [],
-      invoices: [],
-      recurrences: [],
-      budgets: [],
-      monthlyClosings: [],
-    }
+    const empty = createEmptyFinanceState()
     setState(empty)
+    if (userId) {
+      markExampleDataCleared(userId)
+      clearExampleDataSnapshot(userId)
+    }
     persist(async (uidValue) => {
       await clearRemoteFinanceData(supabase!, uidValue)
       await auditLog(supabase!, "finance_data_cleared", "system")
     })
-  }, [persist, supabase])
+  }, [persist, supabase, userId])
 
   const completeOnboarding = React.useCallback(() => {
     window.localStorage.setItem("organiza-mei:onboarding-completed", "true")
@@ -653,18 +718,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       clearExampleDataForCurrentUser,
       clearExampleData,
       clearAllData,
-      hasExampleData: [
-        ...state.accounts,
-        ...state.cards,
-        ...state.categories,
-        ...state.transactions,
-        ...state.installmentPurchases,
-        ...state.installments,
-        ...state.invoices,
-        ...state.recurrences,
-        ...state.budgets,
-        ...state.monthlyClosings,
-      ].some((item) => item.example_data),
+      hasExampleData: hasAnyExampleData(state),
       onboardingCompleted,
       onboardingSkipped,
       completeOnboarding,
