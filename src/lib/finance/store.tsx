@@ -16,6 +16,7 @@ import {
   Transaction,
 } from "@/lib/finance/types"
 import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 import {
   auditLog,
   clearRemoteExampleData,
@@ -66,8 +67,10 @@ type FinanceContextValue = FinanceState & {
   saveMonthlyClosing: (closing: Omit<MonthlyClosing, "id">) => void
   resetMockData: () => void
   populateExampleData: () => void
+  clearExampleDataForCurrentUser: () => Promise<void>
   clearExampleData: () => void
   clearAllData: () => void
+  hasExampleData: boolean
   onboardingCompleted: boolean
   onboardingSkipped: boolean
   completeOnboarding: () => void
@@ -133,6 +136,19 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       console.error("Erro ao persistir no Supabase:", error)
     }
   }, [supabase, userId])
+
+  const stripExampleData = React.useCallback((input: FinanceState): FinanceState => ({
+    accounts: input.accounts.filter((item) => !item.example_data),
+    cards: input.cards.filter((item) => !item.example_data),
+    categories: input.categories.filter((item) => !item.example_data),
+    transactions: input.transactions.filter((item) => !item.example_data),
+    installmentPurchases: input.installmentPurchases.filter((item) => !item.example_data),
+    installments: input.installments.filter((item) => !item.example_data),
+    invoices: input.invoices.filter((item) => !item.example_data),
+    recurrences: input.recurrences.filter((item) => !item.example_data),
+    budgets: input.budgets.filter((item) => !item.example_data),
+    monthlyClosings: input.monthlyClosings.filter((item) => !item.example_data),
+  }), [])
 
   const addAccount = React.useCallback((account: Omit<Account, "id" | "current_balance" | "status">) => {
     const created: Account = { ...account, id: uid("acc"), current_balance: account.initial_balance, status: "active" }
@@ -538,25 +554,30 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     persistStateRows(example)
   }, [persistStateRows, state.categories])
 
+  const clearExampleDataForCurrentUser = React.useCallback(async () => {
+    const previous = state
+    setState((current) => syncState(stripExampleData(current)))
+
+    try {
+      if (supabase && userId) {
+        await clearRemoteExampleData(supabase, userId)
+        await auditLog(supabase, "example_data_cleared", "system")
+      }
+    } catch (error) {
+      setState(syncState(previous))
+      throw error
+    }
+  }, [state, stripExampleData, supabase, userId])
+
   const clearExampleData = React.useCallback(() => {
     if (!window.confirm("Isso removera apenas os dados de exemplo. Seus dados reais serao preservados.")) return
-    setState((current) => syncState({
-      accounts: current.accounts.filter((item) => !item.example_data),
-      cards: current.cards.filter((item) => !item.example_data),
-      categories: current.categories.filter((item) => !item.example_data),
-      transactions: current.transactions.filter((item) => !item.example_data),
-      installmentPurchases: current.installmentPurchases.filter((item) => !item.example_data),
-      installments: current.installments.filter((item) => !item.example_data),
-      invoices: current.invoices.filter((item) => !item.example_data),
-      recurrences: current.recurrences.filter((item) => !item.example_data),
-      budgets: current.budgets.filter((item) => !item.example_data),
-      monthlyClosings: current.monthlyClosings.filter((item) => !item.example_data),
-    }))
-    persist(async (uidValue) => {
-      await clearRemoteExampleData(supabase!, uidValue)
-      await auditLog(supabase!, "example_data_cleared", "system")
-    })
-  }, [persist, supabase])
+    clearExampleDataForCurrentUser()
+      .then(() => toast.success("Dados de exemplo removidos com sucesso."))
+      .catch((error) => {
+        console.error("Erro ao limpar dados de exemplo:", error)
+        toast.error("Nao foi possivel limpar os dados de exemplo. Tente novamente.")
+      })
+  }, [clearExampleDataForCurrentUser])
 
   const clearAllData = React.useCallback(() => {
     if (!window.confirm("Limpar dados financeiros deste usuario? Esta acao remove os dados locais e, se autenticado, tambem os dados no Supabase.")) return
@@ -629,8 +650,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       saveMonthlyClosing,
       resetMockData,
       populateExampleData,
+      clearExampleDataForCurrentUser,
       clearExampleData,
       clearAllData,
+      hasExampleData: [
+        ...state.accounts,
+        ...state.cards,
+        ...state.categories,
+        ...state.transactions,
+        ...state.installmentPurchases,
+        ...state.installments,
+        ...state.invoices,
+        ...state.recurrences,
+        ...state.budgets,
+        ...state.monthlyClosings,
+      ].some((item) => item.example_data),
       onboardingCompleted,
       onboardingSkipped,
       completeOnboarding,
@@ -667,6 +701,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       saveMonthlyClosing,
       resetMockData,
       populateExampleData,
+      clearExampleDataForCurrentUser,
       clearExampleData,
       clearAllData,
       onboardingCompleted,

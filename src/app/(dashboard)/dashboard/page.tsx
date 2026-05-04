@@ -5,7 +5,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AlertCircle, ArrowDownIcon, ArrowRightLeft, ArrowUpIcon, Building2, CalendarClock, CreditCard, Landmark, PlusCircle, Repeat, Target, UserCircle2 } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { toast } from "sonner"
 
+import { ExampleDataBanner } from "@/components/dashboard/example-data-banner"
 import { EmptyState } from "@/components/finance/empty-state"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -32,6 +34,7 @@ export default function DashboardPage() {
   const savedFilter = getSavedFilter()
   const [range, setRange] = React.useState<Range>(savedFilter.range)
   const [scope, setScope] = React.useState<ScopeFilter>(savedFilter.scope)
+  const [clearingExampleData, setClearingExampleData] = React.useState(false)
 
   React.useEffect(() => {
     window.localStorage.setItem("organiza-mei:dashboard-filter", JSON.stringify({ range, scope }))
@@ -69,6 +72,21 @@ export default function DashboardPage() {
   }))
   const latestTransactions = [...periodTransactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
 
+  async function handleClearExampleData() {
+    setClearingExampleData(true)
+    try {
+      await finance.clearExampleDataForCurrentUser()
+      toast.success("Dados de exemplo removidos com sucesso.")
+      return true
+    } catch (error) {
+      console.error("Erro ao limpar dados de exemplo:", error)
+      toast.error("Nao foi possivel limpar os dados de exemplo. Tente novamente.")
+      return false
+    } finally {
+      setClearingExampleData(false)
+    }
+  }
+
   if (!finance.isLoading && finance.accounts.length === 0) {
     return (
       <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
@@ -91,6 +109,14 @@ export default function DashboardPage() {
           <Button size="sm" variant="ghost" onClick={() => { setRange("current"); setScope("all") }}>Limpar filtros</Button>
         </div>
       </div>
+
+      {finance.hasExampleData && (
+        <ExampleDataBanner
+          hasExampleData={finance.hasExampleData}
+          loading={clearingExampleData}
+          onClearExampleData={handleClearExampleData}
+        />
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Quick href="/transactions" label="Novo lancamento" icon={PlusCircle} />
