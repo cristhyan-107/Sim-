@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { INITIAL_FINANCE_STATE } from "@/data/mock-data"
-import { createExampleFinanceData } from "@/lib/finance/example-data"
+import { createExampleFinanceData, markFinanceStateAsExample } from "@/lib/finance/example-data"
 import {
   Account,
   CardAccount,
@@ -90,7 +90,7 @@ function syncState(next: FinanceState): FinanceState {
 }
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = React.useState<FinanceState>(() => syncState(INITIAL_FINANCE_STATE))
+  const [state, setState] = React.useState<FinanceState>(() => syncState(markFinanceStateAsExample(INITIAL_FINANCE_STATE)))
   const [userId, setUserId] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(hasSupabaseEnv())
   const [onboardingCompleted, setOnboardingCompleted] = React.useState(() =>
@@ -513,7 +513,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const resetMockData = React.useCallback(() => {
     if (window.confirm("Popular dados de exemplo em memoria local?")) {
-      setState(syncState(INITIAL_FINANCE_STATE))
+      setState(syncState(markFinanceStateAsExample(INITIAL_FINANCE_STATE)))
     }
   }, [])
 

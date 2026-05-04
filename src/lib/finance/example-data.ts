@@ -71,3 +71,18 @@ export function createExampleFinanceData(existingCategories: Category[] = []): F
 
   return { accounts, cards, categories, transactions, installmentPurchases: purchases, installments, invoices, recurrences, budgets, monthlyClosings: [] }
 }
+
+export function markFinanceStateAsExample(state: FinanceState): FinanceState {
+  return {
+    accounts: state.accounts.map((item) => ({ ...item, example_data: true })),
+    cards: state.cards.map((item) => ({ ...item, example_data: true })),
+    categories: state.categories.map((item) => ({ ...item, example_data: true })),
+    transactions: state.transactions.map((item) => ({ ...item, example_data: true })),
+    installmentPurchases: state.installmentPurchases.map((item) => ({ ...item, example_data: true })),
+    installments: state.installments.map((item) => ({ ...item, example_data: true })),
+    invoices: state.invoices.map((item) => ({ ...item, example_data: true })),
+    recurrences: state.recurrences.map((item) => ({ ...item, example_data: true })),
+    budgets: state.budgets.map((item) => ({ ...item, example_data: true })),
+    monthlyClosings: state.monthlyClosings.map((item) => ({ ...item, example_data: true })),
+  }
+}
