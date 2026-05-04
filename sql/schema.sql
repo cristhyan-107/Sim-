@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT,
   email TEXT NOT NULL,
+  onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
+  onboarding_step INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -29,6 +31,7 @@ CREATE TABLE IF NOT EXISTS public.accounts (
   initial_balance NUMERIC(15, 2) NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'secondary', 'closed')),
   notes TEXT,
+  example_data BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -46,6 +49,7 @@ CREATE TABLE IF NOT EXISTS public.cards (
   due_day INTEGER NOT NULL CHECK (due_day BETWEEN 1 AND 31),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
   notes TEXT,
+  example_data BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -57,6 +61,7 @@ CREATE TABLE IF NOT EXISTS public.categories (
   scope TEXT NOT NULL CHECK (scope IN ('PF', 'PJ')),
   type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  example_data BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(user_id, scope, name)
@@ -79,6 +84,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   recurrence_id UUID,
   related_transaction_id UUID REFERENCES public.transactions(id) ON DELETE SET NULL,
   notes TEXT,
+  example_data BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -97,6 +103,7 @@ CREATE TABLE IF NOT EXISTS public.installment_purchases (
   first_invoice_month DATE NOT NULL,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'finished')),
   notes TEXT,
+  example_data BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -112,6 +119,7 @@ CREATE TABLE IF NOT EXISTS public.invoices (
   paid_at TIMESTAMPTZ,
   paid_from_account_id UUID REFERENCES public.accounts(id) ON DELETE RESTRICT,
   payment_transaction_id UUID REFERENCES public.transactions(id) ON DELETE SET NULL,
+  example_data BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(user_id, card_id, invoice_month)
@@ -130,6 +138,7 @@ CREATE TABLE IF NOT EXISTS public.installments (
   amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'cancelled')),
   invoice_id UUID REFERENCES public.invoices(id) ON DELETE SET NULL,
+  example_data BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -150,6 +159,7 @@ CREATE TABLE IF NOT EXISTS public.recurrences (
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'finished')),
   payment_method TEXT NOT NULL DEFAULT 'pix' CHECK (payment_method IN ('pix', 'debit', 'credit_card', 'cash', 'bank_slip', 'transfer', 'other')),
   notes TEXT,
+  example_data BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -164,6 +174,7 @@ CREATE TABLE IF NOT EXISTS public.budgets (
   alert_percentage INTEGER NOT NULL DEFAULT 80 CHECK (alert_percentage BETWEEN 0 AND 100),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
   notes TEXT,
+  example_data BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(user_id, category_id, month)
@@ -176,6 +187,7 @@ CREATE TABLE IF NOT EXISTS public.monthly_closings (
   notes TEXT,
   reviewed BOOLEAN NOT NULL DEFAULT FALSE,
   reviewed_at TIMESTAMPTZ,
+  example_data BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(user_id, month)
@@ -209,25 +221,35 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON public.profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON public.accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_accounts_scope_status ON public.accounts(scope, status);
+CREATE INDEX IF NOT EXISTS idx_accounts_example_data ON public.accounts(user_id, example_data);
 CREATE INDEX IF NOT EXISTS idx_cards_user_id ON public.cards(user_id);
 CREATE INDEX IF NOT EXISTS idx_cards_account_id ON public.cards(account_id);
 CREATE INDEX IF NOT EXISTS idx_cards_scope_status ON public.cards(scope, status);
+CREATE INDEX IF NOT EXISTS idx_cards_example_data ON public.cards(user_id, example_data);
 CREATE INDEX IF NOT EXISTS idx_categories_user_scope_status ON public.categories(user_id, scope, status);
+CREATE INDEX IF NOT EXISTS idx_categories_example_data ON public.categories(user_id, example_data);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id_date ON public.transactions(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON public.transactions(account_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_card_id ON public.transactions(card_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON public.transactions(category_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_scope_type ON public.transactions(scope, type);
+CREATE INDEX IF NOT EXISTS idx_transactions_example_data ON public.transactions(user_id, example_data);
 CREATE INDEX IF NOT EXISTS idx_installment_purchases_user_status ON public.installment_purchases(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_installment_purchases_example_data ON public.installment_purchases(user_id, example_data);
 CREATE INDEX IF NOT EXISTS idx_installments_card_id ON public.installments(card_id);
 CREATE INDEX IF NOT EXISTS idx_installments_category_id ON public.installments(category_id);
 CREATE INDEX IF NOT EXISTS idx_installments_due_month ON public.installments(due_month);
 CREATE INDEX IF NOT EXISTS idx_installments_status ON public.installments(status);
+CREATE INDEX IF NOT EXISTS idx_installments_example_data ON public.installments(user_id, example_data);
 CREATE INDEX IF NOT EXISTS idx_invoices_card_id ON public.invoices(card_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_month_status ON public.invoices(invoice_month, status);
+CREATE INDEX IF NOT EXISTS idx_invoices_example_data ON public.invoices(user_id, example_data);
 CREATE INDEX IF NOT EXISTS idx_recurrences_user_status ON public.recurrences(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_recurrences_example_data ON public.recurrences(user_id, example_data);
 CREATE INDEX IF NOT EXISTS idx_recurrences_next_due_date ON public.recurrences(next_due_date);
 CREATE INDEX IF NOT EXISTS idx_budgets_user_id_month ON public.budgets(user_id, month);
 CREATE INDEX IF NOT EXISTS idx_budgets_category_id ON public.budgets(category_id);
+CREATE INDEX IF NOT EXISTS idx_budgets_example_data ON public.budgets(user_id, example_data);
 CREATE INDEX IF NOT EXISTS idx_monthly_closings_user_month ON public.monthly_closings(user_id, month);
+CREATE INDEX IF NOT EXISTS idx_monthly_closings_example_data ON public.monthly_closings(user_id, example_data);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_created_at ON public.audit_logs(user_id, created_at);

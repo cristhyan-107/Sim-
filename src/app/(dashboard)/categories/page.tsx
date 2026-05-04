@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { EmptyState } from "@/components/finance/empty-state"
 import { useFinance } from "@/lib/finance/store"
 import { Category, Scope } from "@/lib/finance/types"
 
@@ -93,6 +94,9 @@ export default function CategoriesPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {filteredCategories.length === 0 ? (
+            <EmptyState icon={Tags} title="Nenhuma categoria cadastrada" description="Crie categorias PF e PJ para classificar entradas, saidas e transferencias." actionLabel="Cadastrar categoria" onAction={openNew} secondaryLabel="Popular dados de exemplo" onSecondary={finance.populateExampleData} />
+          ) : (
           <div className="overflow-x-auto rounded-md border">
             <Table>
               <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Escopo</TableHead><TableHead>Natureza</TableHead><TableHead /></TableRow></TableHeader>
@@ -108,6 +112,7 @@ export default function CategoriesPage() {
               </TableBody>
             </Table>
           </div>
+          )}
         </CardContent>
       </Card>
     </div>

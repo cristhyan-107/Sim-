@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { INITIAL_FINANCE_STATE } from "@/data/mock-data"
+import { createExampleFinanceData } from "@/lib/finance/example-data"
 import {
   Account,
   CardAccount,
@@ -17,6 +18,7 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import {
   auditLog,
+  clearRemoteExampleData,
   clearRemoteFinanceData,
   currentUserId,
   deleteRow,
@@ -63,7 +65,14 @@ type FinanceContextValue = FinanceState & {
   deleteBudget: (id: string) => void
   saveMonthlyClosing: (closing: Omit<MonthlyClosing, "id">) => void
   resetMockData: () => void
+  populateExampleData: () => void
+  clearExampleData: () => void
   clearAllData: () => void
+  onboardingCompleted: boolean
+  onboardingSkipped: boolean
+  completeOnboarding: () => void
+  skipOnboarding: () => void
+  reopenOnboarding: () => void
 }
 
 const FinanceContext = React.createContext<FinanceContextValue | null>(null)
@@ -81,6 +90,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<FinanceState>(() => syncState(INITIAL_FINANCE_STATE))
   const [userId, setUserId] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(hasSupabaseEnv())
+  const [onboardingCompleted, setOnboardingCompleted] = React.useState(() =>
+    typeof window !== "undefined" && window.localStorage.getItem("organiza-mei:onboarding-completed") === "true"
+  )
+  const [onboardingSkipped, setOnboardingSkipped] = React.useState(() =>
+    typeof window !== "undefined" && window.localStorage.getItem("organiza-mei:onboarding-skipped") === "true"
+  )
   const supabase = React.useMemo(() => (hasSupabaseEnv() ? createClient() : null), [])
 
   React.useEffect(() => {
@@ -486,6 +501,63 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const persistStateRows = React.useCallback((example: FinanceState) => {
+    persist(async (uidValue) => {
+      await Promise.all(example.categories.map((item) => insertRow(supabase!, "categories", { ...item, user_id: uidValue })))
+      await Promise.all(example.accounts.map((item) => {
+        const { current_balance: currentBalance, ...account } = item
+        void currentBalance
+        return insertRow(supabase!, "accounts", { ...account, user_id: uidValue })
+      }))
+      await Promise.all(example.cards.map((item) => insertRow(supabase!, "cards", { ...item, user_id: uidValue })))
+      await Promise.all(example.transactions.map((item) => insertRow(supabase!, "transactions", { ...item, user_id: uidValue, type: item.type === "invoice_payment" ? "card_payment" : item.type })))
+      await Promise.all(example.installmentPurchases.map((item) => insertRow(supabase!, "installment_purchases", { ...item, user_id: uidValue })))
+      await Promise.all(example.installments.map((item) => insertRow(supabase!, "installments", { ...item, user_id: uidValue })))
+      await Promise.all(example.invoices.map((item) => insertRow(supabase!, "invoices", { ...item, user_id: uidValue })))
+      await Promise.all(example.recurrences.map((item) => insertRow(supabase!, "recurrences", { ...item, user_id: uidValue })))
+      await Promise.all(example.budgets.map((item) => insertRow(supabase!, "budgets", { ...item, user_id: uidValue })))
+      await auditLog(supabase!, "example_data_created", "system")
+    })
+  }, [persist, supabase])
+
+  const populateExampleData = React.useCallback(() => {
+    if (!window.confirm("Criar dados ficticios de demonstracao para este usuario? Eles serao marcados como exemplo.")) return
+    const example = createExampleFinanceData(state.categories)
+    setState((current) => syncState({
+      accounts: [...example.accounts, ...current.accounts],
+      cards: [...example.cards, ...current.cards],
+      categories: [...example.categories, ...current.categories],
+      transactions: [...example.transactions, ...current.transactions],
+      installmentPurchases: [...example.installmentPurchases, ...current.installmentPurchases],
+      installments: [...example.installments, ...current.installments],
+      invoices: [...example.invoices, ...current.invoices],
+      recurrences: [...example.recurrences, ...current.recurrences],
+      budgets: [...example.budgets, ...current.budgets],
+      monthlyClosings: current.monthlyClosings,
+    }))
+    persistStateRows(example)
+  }, [persistStateRows, state.categories])
+
+  const clearExampleData = React.useCallback(() => {
+    if (!window.confirm("Isso removera apenas os dados de exemplo. Seus dados reais serao preservados.")) return
+    setState((current) => syncState({
+      accounts: current.accounts.filter((item) => !item.example_data),
+      cards: current.cards.filter((item) => !item.example_data),
+      categories: current.categories.filter((item) => !item.example_data),
+      transactions: current.transactions.filter((item) => !item.example_data),
+      installmentPurchases: current.installmentPurchases.filter((item) => !item.example_data),
+      installments: current.installments.filter((item) => !item.example_data),
+      invoices: current.invoices.filter((item) => !item.example_data),
+      recurrences: current.recurrences.filter((item) => !item.example_data),
+      budgets: current.budgets.filter((item) => !item.example_data),
+      monthlyClosings: current.monthlyClosings.filter((item) => !item.example_data),
+    }))
+    persist(async (uidValue) => {
+      await clearRemoteExampleData(supabase!, uidValue)
+      await auditLog(supabase!, "example_data_cleared", "system")
+    })
+  }, [persist, supabase])
+
   const clearAllData = React.useCallback(() => {
     if (!window.confirm("Limpar dados financeiros deste usuario? Esta acao remove os dados locais e, se autenticado, tambem os dados no Supabase.")) return
     const empty: FinanceState = {
@@ -506,6 +578,25 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       await auditLog(supabase!, "finance_data_cleared", "system")
     })
   }, [persist, supabase])
+
+  const completeOnboarding = React.useCallback(() => {
+    window.localStorage.setItem("organiza-mei:onboarding-completed", "true")
+    window.localStorage.removeItem("organiza-mei:onboarding-skipped")
+    setOnboardingCompleted(true)
+    setOnboardingSkipped(false)
+  }, [])
+
+  const skipOnboarding = React.useCallback(() => {
+    window.localStorage.setItem("organiza-mei:onboarding-skipped", "true")
+    setOnboardingSkipped(true)
+  }, [])
+
+  const reopenOnboarding = React.useCallback(() => {
+    window.localStorage.removeItem("organiza-mei:onboarding-completed")
+    window.localStorage.removeItem("organiza-mei:onboarding-skipped")
+    setOnboardingCompleted(false)
+    setOnboardingSkipped(false)
+  }, [])
 
   const value = React.useMemo(
     () => ({
@@ -537,7 +628,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       deleteBudget,
       saveMonthlyClosing,
       resetMockData,
+      populateExampleData,
+      clearExampleData,
       clearAllData,
+      onboardingCompleted,
+      onboardingSkipped,
+      completeOnboarding,
+      skipOnboarding,
+      reopenOnboarding,
     }),
     [
       state,
@@ -568,7 +666,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       deleteBudget,
       saveMonthlyClosing,
       resetMockData,
+      populateExampleData,
+      clearExampleData,
       clearAllData,
+      onboardingCompleted,
+      onboardingSkipped,
+      completeOnboarding,
+      skipOnboarding,
+      reopenOnboarding,
     ]
   )
 

@@ -33,6 +33,7 @@ export type Account = {
   initial_balance: number
   current_balance: number
   status: "active" | "secondary" | "closed"
+  example_data?: boolean
 }
 
 export type CardAccount = {
@@ -46,6 +47,7 @@ export type CardAccount = {
   closing_day: number
   due_day: number
   status: "active" | "inactive"
+  example_data?: boolean
 }
 
 export type Category = {
@@ -54,6 +56,7 @@ export type Category = {
   scope: Scope
   type: "income" | "expense" | "transfer"
   status?: "active" | "inactive"
+  example_data?: boolean
 }
 
 export type Transaction = {
@@ -71,6 +74,7 @@ export type Transaction = {
   invoice_id?: string
   recurrence_id?: string
   notes?: string
+  example_data?: boolean
 }
 
 export type InstallmentPurchase = {
@@ -86,6 +90,7 @@ export type InstallmentPurchase = {
   first_invoice_month: string
   status: PurchaseStatus
   notes?: string
+  example_data?: boolean
 }
 
 export type Installment = {
@@ -99,6 +104,7 @@ export type Installment = {
   due_month: string
   amount: number
   status: InstallmentStatus
+  example_data?: boolean
 }
 
 export type Invoice = {
@@ -110,6 +116,7 @@ export type Invoice = {
   paid_from_account_id?: string
   paid_at?: string
   payment_transaction_id?: string
+  example_data?: boolean
 }
 
 export type Recurrence = {
@@ -127,6 +134,7 @@ export type Recurrence = {
   status: RecurrenceStatus
   payment_method: PaymentMethod
   notes?: string
+  example_data?: boolean
 }
 
 export type Budget = {
@@ -138,6 +146,7 @@ export type Budget = {
   alert_percentage: number
   status: BudgetStatus
   notes?: string
+  example_data?: boolean
 }
 
 export type MonthlyClosing = {
@@ -146,6 +155,7 @@ export type MonthlyClosing = {
   notes?: string
   reviewed: boolean
   reviewed_at?: string
+  example_data?: boolean
 }
 
 export type FinanceState = {

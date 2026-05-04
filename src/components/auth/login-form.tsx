@@ -121,12 +121,16 @@ export function LoginForm() {
 }
 
 function getStatusMessage(searchParams: ReturnType<typeof useSearchParams>) {
-  if (searchParams.get("confirmed") === "1") {
+  if (searchParams.get("confirmed") === "1" || searchParams.get("confirmed") === "true") {
     return { type: "success" as const, message: "Conta confirmada com sucesso. Agora voce ja pode entrar." }
   }
 
   if (searchParams.get("reset") === "success") {
-    return { type: "success" as const, message: "Senha redefinida com sucesso. Entre com sua nova senha." }
+    return { type: "success" as const, message: "Senha redefinida com sucesso." }
+  }
+
+  if (searchParams.get("expired") === "true") {
+    return { type: "error" as const, message: "Sua sessao expirou. Entre novamente para continuar." }
   }
 
   if (searchParams.get("error") === "callback") {

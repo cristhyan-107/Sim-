@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { EmptyState } from "@/components/finance/empty-state"
 import { useFinance } from "@/lib/finance/store"
 import { Account, Scope } from "@/lib/finance/types"
 import { formatCurrency } from "@/lib/utils"
@@ -106,6 +107,9 @@ export default function AccountsPage() {
           <div className="relative mt-4 max-w-sm"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" placeholder="Buscar contas..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
         </CardHeader>
         <CardContent>
+          {filteredAccounts.length === 0 ? (
+            <EmptyState icon={Landmark} title="Nenhuma conta cadastrada" description="Comece cadastrando sua conta PF principal ou sua conta PJ do MEI." actionLabel="Cadastrar conta" onAction={openNew} secondaryLabel="Popular dados de exemplo" onSecondary={finance.populateExampleData} />
+          ) : (
           <div className="overflow-x-auto rounded-md border">
             <Table>
               <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Escopo</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Saldo</TableHead><TableHead /></TableRow></TableHeader>
@@ -123,6 +127,7 @@ export default function AccountsPage() {
               </TableBody>
             </Table>
           </div>
+          )}
         </CardContent>
       </Card>
     </div>

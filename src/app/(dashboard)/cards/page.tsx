@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { EmptyState } from "@/components/finance/empty-state"
 import { useFinance } from "@/lib/finance/store"
 import { CardAccount, Scope } from "@/lib/finance/types"
 import { formatCurrency } from "@/lib/utils"
@@ -106,7 +107,11 @@ export default function CardsPage() {
       <div className="relative max-w-sm"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" placeholder="Buscar cartoes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {filteredCards.map((card) => (
+        {filteredCards.length === 0 ? (
+          <div className="md:col-span-2 xl:col-span-3">
+            <EmptyState icon={CreditCard} title="Nenhum cartao cadastrado" description="Cadastre apenas um apelido do cartao. Nunca informe numero completo, CVV ou validade." actionLabel="Cadastrar cartao" onAction={openNew} />
+          </div>
+        ) : filteredCards.map((card) => (
           <Card key={card.id} className="relative overflow-hidden">
             <div className={`absolute left-0 top-0 h-full w-1 ${card.scope === "PF" ? "bg-blue-500" : "bg-emerald-500"}`} />
             <CardHeader>

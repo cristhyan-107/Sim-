@@ -8,6 +8,7 @@ import {
   BarChart3,
   CalendarDays,
   CreditCard,
+  CircleHelp,
   Landmark,
   LayoutDashboard,
   LogOut,
@@ -17,6 +18,7 @@ import {
   Settings,
   Tags,
   Target,
+  WalletCards,
 } from "lucide-react"
 
 import { ThemeToggle } from "@/components/layout/theme-toggle"
@@ -29,6 +31,7 @@ const menuItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Contas", href: "/accounts", icon: Landmark },
   { name: "Cartoes", href: "/cards", icon: CreditCard },
+  { name: "Contas & Cartoes", href: "/accounts-cards", icon: WalletCards },
   { name: "Categorias", href: "/categories", icon: Tags },
   { name: "Lancamentos", href: "/transactions", icon: ArrowRightLeft },
   { name: "Parcelados", href: "/installments", icon: Receipt },
@@ -38,6 +41,7 @@ const menuItems = [
   { name: "Orcamento", href: "/budgets", icon: Target },
   { name: "Fechamento", href: "/monthly-closing", icon: BarChart3 },
   { name: "Relatorios", href: "/reports", icon: BarChart3 },
+  { name: "Ajuda", href: "/help", icon: CircleHelp },
 ]
 
 export function Sidebar() {

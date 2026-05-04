@@ -74,6 +74,7 @@ export async function loadFinanceState(supabase: SupabaseClient): Promise<Financ
       initial_balance: numberValue(item.initial_balance),
       current_balance: numberValue(item.initial_balance),
       status: item.status,
+      example_data: Boolean(item.example_data),
     })),
     cards: (cards.data || []).map((item): CardAccount => ({
       id: item.id,
@@ -86,6 +87,7 @@ export async function loadFinanceState(supabase: SupabaseClient): Promise<Financ
       closing_day: item.closing_day,
       due_day: item.due_day,
       status: item.status,
+      example_data: Boolean(item.example_data),
     })),
     categories: (categories.data || []).map((item): Category => ({
       id: item.id,
@@ -93,6 +95,7 @@ export async function loadFinanceState(supabase: SupabaseClient): Promise<Financ
       scope: item.scope,
       type: item.type,
       status: item.status,
+      example_data: Boolean(item.example_data),
     })),
     transactions: (transactions.data || []).map((item): Transaction => ({
       id: item.id,
@@ -109,6 +112,7 @@ export async function loadFinanceState(supabase: SupabaseClient): Promise<Financ
       invoice_id: item.invoice_id || undefined,
       recurrence_id: item.recurrence_id || undefined,
       notes: item.notes || undefined,
+      example_data: Boolean(item.example_data),
     })),
     installmentPurchases: (purchases.data || []).map((item): InstallmentPurchase => ({
       id: item.id,
@@ -123,6 +127,7 @@ export async function loadFinanceState(supabase: SupabaseClient): Promise<Financ
       first_invoice_month: item.first_invoice_month,
       status: item.status,
       notes: item.notes || undefined,
+      example_data: Boolean(item.example_data),
     })),
     installments: (installments.data || []).map((item): Installment => ({
       id: item.id,
@@ -135,6 +140,7 @@ export async function loadFinanceState(supabase: SupabaseClient): Promise<Financ
       due_month: item.due_month,
       amount: numberValue(item.amount),
       status: item.status,
+      example_data: Boolean(item.example_data),
     })),
     invoices: (invoices.data || []).map((item): Invoice => ({
       id: item.id,
@@ -145,6 +151,7 @@ export async function loadFinanceState(supabase: SupabaseClient): Promise<Financ
       paid_from_account_id: item.paid_from_account_id || undefined,
       paid_at: item.paid_at || undefined,
       payment_transaction_id: item.payment_transaction_id || undefined,
+      example_data: Boolean(item.example_data),
     })),
     recurrences: (recurrences.data || []).map((item): Recurrence => ({
       id: item.id,
@@ -161,6 +168,7 @@ export async function loadFinanceState(supabase: SupabaseClient): Promise<Financ
       status: item.status,
       payment_method: item.payment_method || "pix",
       notes: item.notes || undefined,
+      example_data: Boolean(item.example_data),
     })),
     budgets: (budgets.data || []).map((item): Budget => ({
       id: item.id,
@@ -171,6 +179,7 @@ export async function loadFinanceState(supabase: SupabaseClient): Promise<Financ
       alert_percentage: item.alert_percentage,
       status: item.status || "active",
       notes: item.notes || undefined,
+      example_data: Boolean(item.example_data),
     })),
     monthlyClosings: (monthlyClosings.data || []).map((item): MonthlyClosing => ({
       id: item.id,
@@ -178,7 +187,27 @@ export async function loadFinanceState(supabase: SupabaseClient): Promise<Financ
       notes: item.notes || undefined,
       reviewed: item.reviewed,
       reviewed_at: item.reviewed_at || undefined,
+      example_data: Boolean(item.example_data),
     })),
+  }
+}
+
+export async function clearRemoteExampleData(supabase: SupabaseClient, userId: string) {
+  const order: TableName[] = [
+    "installments",
+    "invoices",
+    "installment_purchases",
+    "transactions",
+    "recurrences",
+    "budgets",
+    "cards",
+    "accounts",
+    "categories",
+    "monthly_closings",
+  ]
+  for (const table of order) {
+    const { error } = await supabase.from(table).delete().eq("user_id", userId).eq("example_data", true)
+    if (error) throw error
   }
 }
 

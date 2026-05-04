@@ -1,13 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { CheckCircle2, Database, Download, Moon, ShieldAlert, Sun, Trash2, User, Monitor } from "lucide-react"
+import { CheckCircle2, Database, Download, Moon, PlayCircle, RotateCcw, ShieldAlert, Sun, Trash2, User, Monitor } from "lucide-react"
+import Link from "next/link"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { csvRows, datedName, downloadCsv } from "@/lib/csv"
 import { getMonthlyClosingSnapshot } from "@/lib/finance/engine"
 import { useFinance } from "@/lib/finance/store"
+import { cn } from "@/lib/utils"
 
 export default function SettingsPage() {
   const finance = useFinance()
@@ -112,8 +114,11 @@ export default function SettingsPage() {
           <Button variant="outline" onClick={() => downloadCsv(`fechamento-${month}.csv`, [{ mes: month, ...closing }])}>Fechamento CSV</Button>
           <Button variant="outline" onClick={() => downloadCsv(datedName("dados-pf"), csvRows.transactions(finance).filter((item) => item.escopo === "PF"))}>Dados PF CSV</Button>
           <Button variant="outline" onClick={() => downloadCsv(datedName("dados-pj"), csvRows.transactions(finance).filter((item) => item.escopo === "PJ"))}>Dados PJ CSV</Button>
-          <Button variant="outline" onClick={finance.resetMockData}>Popular dados de exemplo</Button>
-          <Button variant="destructive" onClick={finance.clearAllData}><Trash2 className="mr-2 h-4 w-4" />Limpar dados</Button>
+          <Button variant="outline" onClick={finance.populateExampleData}><PlayCircle className="mr-2 h-4 w-4" />Popular dados de exemplo</Button>
+          <Button variant="outline" onClick={finance.clearExampleData}><Trash2 className="mr-2 h-4 w-4" />Limpar dados de exemplo</Button>
+          <Button variant="outline" onClick={finance.reopenOnboarding}><RotateCcw className="mr-2 h-4 w-4" />Reabrir primeiro acesso</Button>
+          <Link className={cn(buttonVariants({ variant: "outline" }), "h-8")} href="/onboarding">Abrir onboarding</Link>
+          <Button variant="destructive" onClick={finance.clearAllData}><Trash2 className="mr-2 h-4 w-4" />Limpar todos os dados</Button>
         </CardContent>
       </Card>
 
