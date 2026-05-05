@@ -13,6 +13,7 @@ import {
   MoreHorizontal,
   PlusCircle,
   Search,
+  Upload,
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -63,6 +64,8 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { useFinance } from "@/lib/finance/store"
+import { useLevel2 } from "@/components/providers/level2-provider"
+import { findDuplicateTransaction } from "@/lib/level2/automation"
 import { PaymentMethod, Scope, Transaction, TransactionType } from "@/lib/finance/types"
 import { cn, formatCurrency, formatDate } from "@/lib/utils"
 
@@ -155,6 +158,7 @@ function toFormValues(transaction: Transaction): FormValues {
 
 export default function TransactionsPage() {
   const finance = useFinance()
+  const level2 = useLevel2()
   const [open, setOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Transaction | null>(null)
   const [search, setSearch] = React.useState("")
@@ -165,6 +169,8 @@ export default function TransactionsPage() {
   const [type, setType] = React.useState<TransactionType | "ALL">("ALL")
   const [payment, setPayment] = React.useState<PaymentMethod | "ALL">("ALL")
   const [isSaving, setIsSaving] = React.useState(false)
+  const [attachmentTarget, setAttachmentTarget] = React.useState<Transaction | null>(null)
+  const attachmentInputRef = React.useRef<HTMLInputElement | null>(null)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -224,6 +230,19 @@ export default function TransactionsPage() {
         card_id: values.card_id || undefined,
         notes: values.notes || undefined,
       }
+      const duplicate = findDuplicateTransaction(
+        {
+          date: payload.date,
+          description: payload.description,
+          amount: payload.amount,
+          selected_account_id: payload.account_id,
+        },
+        finance
+      )
+      if (duplicate && !window.confirm("Esse lancamento parece duplicado. Deseja continuar mesmo assim?")) {
+        setIsSaving(false)
+        return
+      }
       if (editing) {
         finance.updateTransaction(editing.id, payload)
         toast.success("Lancamento atualizado com sucesso.")
@@ -244,6 +263,19 @@ export default function TransactionsPage() {
     if (!window.confirm(`Excluir o lancamento "${transaction.description}"?`)) return
     finance.deleteTransaction(transaction.id)
     toast.success("Lancamento excluido e resumos recalculados.")
+  }
+
+  async function attachReceipt(file?: File) {
+    if (!attachmentTarget || !file) return
+    try {
+      await level2.addAttachment({ entity_type: "transaction", entity_id: attachmentTarget.id, file })
+      toast.success("Comprovante anexado ao lancamento.")
+    } catch (error) {
+      console.error(error)
+      toast.error("Nao foi possivel anexar o comprovante.")
+    } finally {
+      setAttachmentTarget(null)
+    }
   }
 
   return (
@@ -437,20 +469,22 @@ export default function TransactionsPage() {
                 <TableRow>
                   <TableHead>Data</TableHead>
                   <TableHead>Descricao</TableHead>
-                  <TableHead>Escopo</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Forma</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="w-[70px]" />
+                      <TableHead>Escopo</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Forma</TableHead>
+                      <TableHead>Anexo</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="w-[70px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Nenhum lancamento encontrado.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-24 text-center text-muted-foreground">Nenhum lancamento encontrado.</TableCell></TableRow>
                 ) : filtered.map((tx) => {
                   const origin = finance.accounts.find((item) => item.id === tx.account_id)
                   const destination = finance.accounts.find((item) => item.id === tx.destination_account_id)
                   const categoryName = finance.categories.find((item) => item.id === tx.category_id)?.name
+                  const hasAttachment = level2.attachments.some((item) => item.entity_type === "transaction" && item.entity_id === tx.id)
                   return (
                     <TableRow key={tx.id}>
                       <TableCell className="whitespace-nowrap"><CalendarDays className="mr-2 inline h-4 w-4 text-muted-foreground" />{formatDate(tx.date)}</TableCell>
@@ -461,6 +495,7 @@ export default function TransactionsPage() {
                       <TableCell><ScopeBadge scope={tx.scope} /></TableCell>
                       <TableCell><div className="flex items-center">{getTransactionIcon(tx.type)}{typeLabels[tx.type]}</div></TableCell>
                       <TableCell>{paymentLabels[tx.payment_method]}</TableCell>
+                      <TableCell>{hasAttachment ? <Badge variant="outline">Comprovante</Badge> : <span className="text-xs text-muted-foreground">-</span>}</TableCell>
                       <TableCell className={cn("text-right font-semibold", tx.type === "income" ? "text-emerald-600" : ["transfer", "owner_withdrawal"].includes(tx.type) ? "text-amber-600" : "text-foreground")}>{tx.type === "income" ? "+" : tx.type === "transfer" ? "" : "-"}{formatCurrency(tx.amount)}</TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -468,6 +503,7 @@ export default function TransactionsPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Acoes</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => openEdit(tx)}>Editar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setAttachmentTarget(tx); attachmentInputRef.current?.click() }}><Upload className="mr-2 h-4 w-4" />Anexar comprovante</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-destructive" onClick={() => removeTransaction(tx)}><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>
                           </DropdownMenuContent>
@@ -481,6 +517,17 @@ export default function TransactionsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <input
+        ref={attachmentInputRef}
+        type="file"
+        accept=".pdf,.png,.jpg,.jpeg,.webp"
+        className="hidden"
+        onChange={(event) => {
+          void attachReceipt(event.target.files?.[0] || undefined)
+          event.currentTarget.value = ""
+        }}
+      />
     </div>
   )
 }

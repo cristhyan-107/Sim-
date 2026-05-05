@@ -76,6 +76,7 @@ type FinanceContextValue = FinanceState & {
   updateBudget: (id: string, budget: Omit<Budget, "id" | "status">) => void
   deleteBudget: (id: string) => void
   saveMonthlyClosing: (closing: Omit<MonthlyClosing, "id">) => void
+  restoreFinanceState: (snapshot: FinanceState) => void
   resetMockData: () => void
   populateExampleData: () => void
   clearExampleDataForCurrentUser: () => Promise<void>
@@ -587,6 +588,29 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     })
   }, [persist, supabase])
 
+  const restoreFinanceState = React.useCallback((snapshot: FinanceState) => {
+    const next = syncState(snapshot)
+    setState(next)
+    persist(async (uidValue) => {
+      await clearRemoteFinanceData(supabase!, uidValue)
+      await Promise.all(next.categories.map((item) => insertRow(supabase!, "categories", { ...item, user_id: uidValue })))
+      await Promise.all(next.accounts.map((item) => {
+        const { current_balance: currentBalance, ...account } = item
+        void currentBalance
+        return insertRow(supabase!, "accounts", { ...account, user_id: uidValue })
+      }))
+      await Promise.all(next.cards.map((item) => insertRow(supabase!, "cards", { ...item, user_id: uidValue })))
+      await Promise.all(next.transactions.map((item) => insertRow(supabase!, "transactions", { ...item, user_id: uidValue, type: item.type === "invoice_payment" ? "card_payment" : item.type })))
+      await Promise.all(next.installmentPurchases.map((item) => insertRow(supabase!, "installment_purchases", { ...item, user_id: uidValue })))
+      await Promise.all(next.installments.map((item) => insertRow(supabase!, "installments", { ...item, user_id: uidValue })))
+      await Promise.all(next.invoices.map((item) => insertRow(supabase!, "invoices", { ...item, user_id: uidValue })))
+      await Promise.all(next.recurrences.map((item) => insertRow(supabase!, "recurrences", { ...item, user_id: uidValue })))
+      await Promise.all(next.budgets.map((item) => insertRow(supabase!, "budgets", { ...item, user_id: uidValue })))
+      await Promise.all(next.monthlyClosings.map((item) => insertRow(supabase!, "monthly_closings", { ...item, user_id: uidValue })))
+      await auditLog(supabase!, "finance_backup_restored", "system")
+    })
+  }, [persist, supabase])
+
   const populateExampleData = React.useCallback(() => {
     if (!window.confirm("Criar dados ficticios de demonstracao para este usuario? Eles serao marcados como exemplo.")) return
     const example = createExampleFinanceData(state.categories)
@@ -702,6 +726,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       updateBudget,
       deleteBudget,
       saveMonthlyClosing,
+      restoreFinanceState,
       resetMockData,
       populateExampleData,
       clearExampleDataForCurrentUser,
@@ -742,6 +767,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       updateBudget,
       deleteBudget,
       saveMonthlyClosing,
+      restoreFinanceState,
       resetMockData,
       populateExampleData,
       clearExampleDataForCurrentUser,

@@ -9,15 +9,18 @@ import {
   CalendarDays,
   CreditCard,
   CircleHelp,
+  FileUp,
   Landmark,
   LayoutDashboard,
   LogOut,
   Menu,
+  BadgeDollarSign,
   Receipt,
   Repeat,
   Settings,
   Tags,
   Target,
+  Calculator,
   WalletCards,
 } from "lucide-react"
 
@@ -41,6 +44,11 @@ const menuItems = [
   { name: "Orcamento", href: "/budgets", icon: Target },
   { name: "Fechamento", href: "/monthly-closing", icon: BarChart3 },
   { name: "Relatorios", href: "/reports", icon: BarChart3 },
+  { name: "Importacoes", href: "/imports", icon: FileUp },
+  { name: "Painel MEI", href: "/mei", icon: BadgeDollarSign },
+  { name: "DAS", href: "/das", icon: Receipt },
+  { name: "Simulador", href: "/simulator", icon: Calculator },
+  { name: "Metas e Reservas", href: "/goals", icon: Target },
   { name: "Ajuda", href: "/help", icon: CircleHelp },
 ]
 

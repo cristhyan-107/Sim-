@@ -6,7 +6,8 @@ DECLARE
 BEGIN
   FOREACH t IN ARRAY ARRAY[
     'profiles','accounts','cards','categories','transactions','installment_purchases',
-    'installments','invoices','recurrences','budgets','monthly_closings','audit_logs'
+    'installments','invoices','recurrences','budgets','monthly_closings','audit_logs',
+    'user_settings','category_rules','import_batches','imported_transactions','attachments','das_records','goals'
   ]
   LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);

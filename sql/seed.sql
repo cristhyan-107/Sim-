@@ -18,6 +18,10 @@ BEGIN
   VALUES (v_user_id, COALESCE(split_part(v_email, '@', 1), 'Organiza MEI'), v_email)
   ON CONFLICT (user_id) DO UPDATE SET email = EXCLUDED.email;
 
+  INSERT INTO public.user_settings (user_id, mei_annual_limit)
+  VALUES (v_user_id, 81260)
+  ON CONFLICT (user_id) DO UPDATE SET mei_annual_limit = EXCLUDED.mei_annual_limit;
+
   INSERT INTO public.categories (user_id, name, scope, type) VALUES
     (v_user_id, 'Alimentacao', 'PF', 'expense'),
     (v_user_id, 'Transporte', 'PF', 'expense'),
@@ -40,6 +44,12 @@ BEGIN
     (v_user_id, 'Reserva da empresa', 'PJ', 'expense'),
     (v_user_id, 'Outros PJ', 'PJ', 'expense')
   ON CONFLICT (user_id, scope, name) DO NOTHING;
+
+  INSERT INTO public.category_rules (user_id, keyword, category_id, scope, transaction_type, priority)
+  SELECT v_user_id, 'DAS', c.id, 'PJ', 'expense', 100
+  FROM public.categories c
+  WHERE c.user_id = v_user_id AND c.name = 'Impostos/DAS'
+  ON CONFLICT DO NOTHING;
 
   RAISE NOTICE 'Seed concluido para usuario %', v_user_id;
 END $$;

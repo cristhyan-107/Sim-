@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CheckCircle2, Database, Download, Moon, PlayCircle, RotateCcw, ShieldAlert, Sun, Trash2, User, Monitor } from "lucide-react"
+import { BadgeDollarSign, CheckCircle2, Database, Download, Moon, PlayCircle, RotateCcw, ShieldAlert, Sun, Trash2, User, Monitor } from "lucide-react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
@@ -17,11 +17,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { csvRows, datedName, downloadCsv } from "@/lib/csv"
 import { getMonthlyClosingSnapshot } from "@/lib/finance/engine"
 import { useFinance } from "@/lib/finance/store"
+import { useLevel2 } from "@/components/providers/level2-provider"
 import { cn } from "@/lib/utils"
 
 export default function SettingsPage() {
   const finance = useFinance()
+  const level2 = useLevel2()
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const backupInputRef = React.useRef<HTMLInputElement | null>(null)
   const [profile, setProfile] = React.useState({ name: "Cristian", email: "usuario@organiza-mei.local", type: "MEI individual" })
   const [preferences, setPreferences] = React.useState({
     currency: "BRL",
@@ -46,6 +49,12 @@ export default function SettingsPage() {
       ...csvRows.recurrences(finance).map((item) => ({ grupo: "recorrencias", ...item })),
       ...csvRows.budgets(finance).map((item) => ({ grupo: "orcamentos", ...item })),
     ])
+  }
+
+  async function importBackup(file?: File) {
+    if (!file) return
+    const content = await file.text()
+    level2.restoreBackup(content)
   }
 
   const month = preferences.defaultMonth
@@ -104,23 +113,33 @@ export default function SettingsPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Download className="h-5 w-5" />Dados e exportacao</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
-          <Button variant="outline" onClick={exportAll}>Todos os dados CSV</Button>
-          <Button variant="outline" onClick={() => downloadCsv(datedName("lancamentos"), csvRows.transactions(finance))}>Lancamentos CSV</Button>
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Download className="h-5 w-5" />Dados e exportacao</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
+            <Button variant="outline" onClick={exportAll}>Todos os dados CSV</Button>
+            <Button variant="outline" onClick={() => downloadCsv(datedName("lancamentos"), csvRows.transactions(finance))}>Lancamentos CSV</Button>
           <Button variant="outline" onClick={() => downloadCsv(datedName("faturas"), csvRows.invoices(finance))}>Faturas CSV</Button>
           <Button variant="outline" onClick={() => downloadCsv(datedName("parcelados"), csvRows.installments(finance))}>Parcelados CSV</Button>
           <Button variant="outline" onClick={() => downloadCsv(`fechamento-${month}.csv`, [{ mes: month, ...closing }])}>Fechamento CSV</Button>
           <Button variant="outline" onClick={() => downloadCsv(datedName("dados-pf"), csvRows.transactions(finance).filter((item) => item.escopo === "PF"))}>Dados PF CSV</Button>
-          <Button variant="outline" onClick={() => downloadCsv(datedName("dados-pj"), csvRows.transactions(finance).filter((item) => item.escopo === "PJ"))}>Dados PJ CSV</Button>
-          <Button variant="outline" onClick={finance.populateExampleData}><PlayCircle className="mr-2 h-4 w-4" />Popular dados de exemplo</Button>
-          <Button variant="outline" onClick={finance.clearExampleData}><Trash2 className="mr-2 h-4 w-4" />Limpar dados de exemplo</Button>
-          <Button variant="outline" onClick={finance.reopenOnboarding}><RotateCcw className="mr-2 h-4 w-4" />Reabrir primeiro acesso</Button>
-          <Link className={cn(buttonVariants({ variant: "outline" }), "h-8")} href="/onboarding">Abrir onboarding</Link>
-          <Button variant="destructive" onClick={finance.clearAllData}><Trash2 className="mr-2 h-4 w-4" />Limpar todos os dados</Button>
-        </CardContent>
-      </Card>
+            <Button variant="outline" onClick={() => downloadCsv(datedName("dados-pj"), csvRows.transactions(finance).filter((item) => item.escopo === "PJ"))}>Dados PJ CSV</Button>
+            <Button variant="outline" onClick={finance.populateExampleData}><PlayCircle className="mr-2 h-4 w-4" />Popular dados de exemplo</Button>
+            <Button variant="outline" onClick={finance.clearExampleData}><Trash2 className="mr-2 h-4 w-4" />Limpar dados de exemplo</Button>
+            <Button variant="outline" onClick={level2.exportBackup}><Download className="mr-2 h-4 w-4" />Exportar backup JSON</Button>
+            <Button variant="outline" onClick={() => backupInputRef.current?.click()}><RotateCcw className="mr-2 h-4 w-4" />Restaurar backup JSON</Button>
+            <Button variant="outline" onClick={finance.reopenOnboarding}><RotateCcw className="mr-2 h-4 w-4" />Reabrir primeiro acesso</Button>
+            <Link className={cn(buttonVariants({ variant: "outline" }), "h-8")} href="/onboarding">Abrir onboarding</Link>
+            <Button variant="destructive" onClick={finance.clearAllData}><Trash2 className="mr-2 h-4 w-4" />Limpar todos os dados</Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><BadgeDollarSign className="h-5 w-5" />Limite anual do MEI</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-2"><Label>Limite anual</Label><Input type="number" value={level2.userSettings.mei_annual_limit} onChange={(event) => level2.setMeiAnnualLimit(Number(event.target.value) || 0)} /></div>
+            <p className="text-sm text-muted-foreground">Usado no Painel MEI e nos alertas do faturamento anual.</p>
+          </CardContent>
+        </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -142,6 +161,24 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <input
+        ref={backupInputRef}
+        type="file"
+        accept="application/json"
+        className="hidden"
+        onChange={async (event) => {
+          try {
+            await importBackup(event.target.files?.[0] || undefined)
+            toast.success("Backup restaurado com sucesso.")
+          } catch (error) {
+            console.error(error)
+            toast.error("Nao foi possivel restaurar o backup.")
+          } finally {
+            event.currentTarget.value = ""
+          }
+        }}
+      />
     </div>
   )
 
